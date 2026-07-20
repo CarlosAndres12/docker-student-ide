@@ -342,6 +342,58 @@ Ejecuta `./agents.sh` para ver todos los agentes instalados y sus comandos de la
 
 ---
 
+## Modelos gratuitos disponibles
+
+Todos los agentes de IA incluidos funcionan con modelos gratuitos. No necesitas
+pagar nada ni configurar claves API para empezar a usarlos.
+
+### Pi — capa gratuita por defecto
+
+Pi está bloqueado a proveedores gratuitos (`PI_FREE_ONLY=1` en `.env`).
+Usa `pi-free status` para ver el modo actual y los proveedores disponibles.
+
+Para agregar claves de proveedores adicionales, descomenta las líneas
+correspondientes en `.env`:
+
+```bash
+# En el archivo .env:
+SAMBANOVA_API_KEY=tu_clave
+LLM7_API_KEY=tu_clave
+OPENMODEL_API_KEY=tu_clave
+```
+
+### OpenCode — 75+ proveedores vía Models.dev
+
+OpenCode se conecta a Models.dev y tiene acceso a más de 75 proveedores gratuitos
+sin necesidad de configurar claves. También incluye MCP Context7 para búsqueda
+de documentación actualizada.
+
+```bash
+opencode
+```
+
+### Freebuff — modelos gratuitos integrados
+
+Freebuff incluye modelos gratuitos listos para usar: DeepSeek V4 Flash,
+Kimi K2.7 y MiniMax M2.7.
+
+```bash
+freebuff
+```
+
+### MiMo — canal gratuito `mimo-auto`
+
+MiMo ofrece un canal gratuito con 1M tokens de contexto, 128K tokens de salida
+y soporte para imágenes (visión). Sin API key ni registro.
+
+> ⚠️ El canal gratuito de MiMo está disponible por tiempo limitado.
+
+```bash
+mimo
+```
+
+---
+
 ## Solución de problemas
 
 ### "port is already allocated" (conflicto de puertos)
