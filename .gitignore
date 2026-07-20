@@ -1,0 +1,39 @@
+# ── OpenSpec / agent workflow artifacts (dev-only, not needed by students) ──
+openspec/
+.agent/
+.pi/
+.atl/
+.opencode/
+
+# Student workspace — contains student projects and generated content
+# We ignore everything inside by default but allow tracking a starter
+# package.json and .gitkeep via ! exceptions.
+student_workspace/*
+!student_workspace/.gitkeep
+!student_workspace/package.json
+
+# Python build artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+*.egg
+.venv/
+venv/
+
+# Node / npm build artifacts
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.next/
+dist/
+
+# IDE / OS files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db

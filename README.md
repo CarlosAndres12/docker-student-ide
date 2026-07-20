@@ -1,0 +1,528 @@
+# docker-student-ide — Entorno de Desarrollo para Estudiantes
+
+Un entorno de desarrollo completo en el navegador, listo con **Node.js 22**, **Python 3.11** (stack de ML/DL), **Jupyter**, **MLflow** y el asistente de IA **Pi** — todo con un solo comando.
+
+Sin instalar nada en tu computadora. Solo necesitas Docker — y los scripts lo instalan si hace falta.
+
+---
+
+## ¿Qué es esto?
+
+Es un "laboratorio portátil" que corre dentro de un contenedor Docker y se abre en tu navegador. Funciona para varias materias:
+
+- **Desarrollo Web** — Node.js, React, Vite, TypeScript
+- **Ciencia de Datos / Machine Learning** — Python, PyTorch, TensorFlow, Jupyter, MLflow
+- **Programación general** — todo lo anterior disponible a la vez
+
+Todo lo que guardes queda en la carpeta `student_workspace/` de tu computadora, así que **no pierdes tu trabajo** al reiniciar el contenedor.
+
+---
+
+## Requisitos previos
+
+| Requisito | Notas |
+|---|---|
+| **NVIDIA Container Toolkit** | **Opcional** — solo si tu curso necesita GPU |
+| **Conexión a internet** | La primera compilación descarga ~4–6 GB |
+| **~20 GB libres en disco** | Cache de build + imagen final + tu workspace |
+
+> ✅ Docker se instalará automáticamente si no lo tienes. Los scripts se encargan de todo.
+
+---
+
+## Puesta en marcha (1 comando)
+
+Elige tu sistema operativo:
+
+| Sistema | Comando |
+|---|---|
+| **macOS / Linux** | `./start.sh` |
+| **Windows (PowerShell)** | `.\start.ps1` |
+
+El script:
+- Instala Docker si no lo tienes (Docker Desktop en macOS/Windows, `docker.io` en Linux).
+- Espera a que Docker arranque y verifica que todo funcione.
+- Configura automáticamente los permisos de archivos (PUID/PGID).
+- Inicia el entorno con `docker compose up`.
+
+Si prefieres no usar el script (ya tienes Docker instalado):
+
+```bash
+docker compose up
+```
+
+> ℹ️ La contraseña por defecto de code-server es **`student`**.
+> Si compartes la computadora, cámbiala en `.env` (ver "Personalización opcional").
+
+⏱️ **La primera vez tarda entre 10 y 20 minutos** (descarga e instala todo el stack).
+Las siguientes veces es mucho más rápido gracias a la caché de Docker.
+
+Para ejecutar en segundo plano:
+
+```bash
+./start.sh -d          # macOS / Linux
+.\start.ps1 -d         # Windows (PowerShell)
+# o también:
+docker compose up -d
+```
+
+Para detenerlo:
+
+```bash
+docker compose down
+```
+
+### Personalización opcional
+
+El archivo `.env` ya viene listo para usar. Solo edítalo si necesitas cambiar
+**cualquiera** de estos valores (todos son opcionales):
+
+```bash
+# Contraseña de code-server (cámbiala si compartes la computadora)
+PASSWORD=student
+
+# Puertos personalizados (si el puerto por defecto está ocupado)
+CODESERVER_PORT=9443     # en vez de 8443
+JUPYTER_PORT=8889        # en vez de 8888
+MLFLOW_PORT=5556         # en vez de 5555
+
+# IDs de usuario (start.sh los detecta automáticamente; solo edítalos
+# si usas docker compose up directamente y no son 1000)
+PUID=1000
+PGID=1000
+```
+
+Después de editar `.env`, reinicia el contenedor:
+
+```bash
+docker compose down
+docker compose up -d
+```
+
+---
+
+## Primer ingreso
+
+1. Abre tu navegador en **http://localhost:8443**
+   (o el puerto configurado en `CODESERVER_PORT` dentro de `.env`).
+
+2. Ingresa la contraseña: **`student`** (es la que viene por defecto en `.env`).
+   Si cambiaste `PASSWORD` en `.env`, usa esa.
+
+3. code-server abre en `/config/workspace` — esta es tu carpeta `student_workspace/`
+   de tu computadora. **Todo lo que crees aquí persiste entre reinicios.**
+
+4. Abre una terminal dentro de code-server (**Terminal → New Terminal**) y verifica
+   que todo funcione (ver sección "Verificación rápida").
+
+> ⚠️ **Si compartes la computadora**, cambia la contraseña por defecto editando
+> `PASSWORD` en `.env` (ver "Personalización opcional" arriba).
+
+---
+
+## ¿Qué hay dentro?
+
+### Stack de desarrollo web
+- **Node.js 22.23.1** (LTS) + npm
+- CLI globales: `create-vite`, `typescript`, `npm-check-updates`
+- Plantilla `package.json` con React 18, react-router-dom, axios, eslint, prettier, vitest, @testing-library/react (todas las versiones fijadas)
+
+### Stack de Python / ML / DL
+- **Python 3.11** con venv y pip
+- Núcleo: pandas, numpy, scipy, scikit-learn
+- Deep learning (CPU por defecto): PyTorch, TensorFlow
+- Boosting: xgboost, lightgbm
+- NLP/CV: transformers, opencv-python, nltk
+- Visualización: matplotlib, seaborn, plotly
+- Notebooks: jupyter, jupyterlab, ipywidgets
+- Experimentos: optuna, mlflow
+- Calidad de código: black, ruff, pytest, python-dotenv
+
+> **Todas las versiones están fijadas** en `requirements.txt` para que el entorno
+> sea reproducible. No se instala nada "a mano" en el Dockerfile.
+
+### Asistente de IA (Pi) — capa gratuita
+- Pi CLI con `gentle-pi` (flujo SDD) y `gentle-engram` (memoria persistente)
+- `pi-free` para desbloquear proveedores gratuitos (Kilo, Cline, OpenRouter, etc.)
+- **Bloqueado por defecto a proveedores gratuitos** — no se cobra nada.
+
+---
+
+## Puertos y cómo acceder
+
+| Puerto | Servicio | Cómo se accede |
+|---|---|---|
+| **8443** | code-server (el IDE) | Directo en el navegador: http://localhost:8443 |
+| **8888** | Jupyter / JupyterLab | Directo en el navegador: http://localhost:8888 |
+| **5555** | MLflow UI | Directo en el navegador: http://localhost:5555 |
+| 3000–9999 | Servidores de desarrollo (Vite, etc.) | A través de la pestaña **Ports** de code-server |
+| 5000, 8000 | Backends / APIs | A través de la pestaña **Ports** de code-server |
+
+> Los puertos 3000–9999, 5000 y 8000 **no se exponen al host** — se acceden vía
+> code-server, que los reenvía automáticamente. Esto evita conflictos con otros
+> servicios que tengas corriendo en tu computadora.
+
+Todos los puertos del navegador (8443, 8888, 5555) se pueden cambiar en `.env`:
+
+```bash
+CODESERVER_PORT=9443    # si el 8443 está ocupado
+JUPYTER_PORT=8889       # si el 8888 está ocupado
+MLFLOW_PORT=5556       # si el 5555 está ocupado
+```
+
+---
+
+## Notas por tipo de curso
+
+### Curso de Desarrollo Web
+
+```bash
+# Crear un proyecto nuevo con Vite
+npm create vite@latest mi-app -- --template react
+cd mi-app
+npm install
+npm run dev
+```
+
+Luego abre la pestaña **Ports** en code-server y reenvía el puerto que Vite te indique
+(normalmente 5173).
+
+**Si tu frontend llama a `https://astryx.atmeta.com/`**: configura la variable de
+entorno `VITE_API_BASE_URL` en el archivo `.env` de **tu proyecto** (no del contenedor):
+
+```bash
+# mi-app/.env
+VITE_API_BASE_URL=https://astryx.atmeta.com/
+```
+
+Esto es configuración del lado del estudiante — **no viene incluida en la imagen Docker**.
+Es posible que también necesites configurar CORS en el lado del API.
+
+### Curso de Machine Learning / Data Science
+
+```bash
+# Iniciar JupyterLab
+jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root
+# Luego abre http://localhost:8888 en tu navegador
+
+# Iniciar MLflow
+mlflow ui --host 0.0.0.0 --port 5555
+# Luego abre http://localhost:5555 en tu navegador
+```
+
+Todo el stack de Python (PyTorch, TensorFlow, pandas, scikit-learn, etc.) ya está
+instalado en el entorno virtual `/opt/venv`.
+
+### Curso general de programación
+
+Tienes todo lo de arriba disponible a la vez. Usa code-server para editar código,
+Jupyter para notebooks, y MLflow para seguimiento de experimentos.
+
+---
+
+## Verificación rápida
+
+Abre una terminal dentro de code-server (**Terminal → New Terminal**) y ejecuta:
+
+```bash
+# Node.js
+node -v            # esperado: v22.23.1
+npm -v
+
+# Python y stack ML/DL
+python --version   # esperado: Python 3.11.x
+python -c "import pandas, numpy, scipy, sklearn; print('Stack core OK')"
+python -c "import torch; print('PyTorch', torch.__version__)"
+python -c "import tensorflow as tf; print('TensorFlow', tf.__version__)"
+
+# Pi (asistente de IA)
+pi --version
+pi package list    # debería mostrar: gentle-pi, gentle-engram, pi-free
+
+# OpenCode (agente de IA alternativo)
+opencode --version
+
+# Freebuff (agente de IA alternativo)
+freebuff --version
+
+# gentle-ai (ecosistema potenciador de agentes)
+gentle-ai --version
+
+# MiMo (asistente de IA alternativo)
+mimo --version
+
+# GPU (solo si la habilitaste)
+nvidia-smi
+```
+
+---
+
+## El asistente de IA (Pi)
+
+### ¿Cómo funciona la capa gratuita?
+
+Pi viene configurado para usar **solo proveedores gratuitos** por defecto. Esto se
+controla de dos formas:
+
+1. **Variable de entorno** `PI_FREE_ONLY=1` en `.env` (activada por defecto).
+2. **Archivo de configuración** en `/home/abc/.pi/config.json`.
+
+Para ver el modo actual o cambiarlo:
+
+```bash
+pi-free status    # muestra el modo de enrutamiento actual
+pi-free free      # bloquear a solo proveedores gratuitos
+pi-free all       # permitir todos (incluidos los de pago) — ¡cuidado!
+```
+
+> ⚠️ **Importante**: Mantén `pi-free free` (o `PI_FREE_ONLY=1`) para no usar
+> proveedores de pago por accidente.
+
+### Proveedores que necesitan OAuth (kilo, cline)
+
+Algunos proveedores gratuitos usan un flujo de OAuth que abre un navegador. Dentro
+del contenedor esto **no funciona directamente** porque no hay navegador gráfico.
+Tienes dos opciones:
+
+**Opción A — Clave API (si el proveedor la soporta):**
+Descomenta la línea correspondiente en `.env` y pon tu clave:
+
+```bash
+KILO_API_KEY=tu_clave_aqui
+CLINE_API_KEY=tu_clave_aqui
+OPENROUTER_API_KEY=tu_clave_aqui
+```
+
+**Opción B — Flujo OAuth una sola vez:**
+
+1. Inicia el contenedor y abre code-server en tu navegador.
+2. En una terminal de code-server ejecuta `pi login kilo` (o el proveedor que sea).
+3. Copia la URL que aparece y pégala en el navegador de **tu computadora**.
+4. Completa el login en tu navegador.
+5. El token se guarda en `student_workspace/.pi/` — **sobrevive a reinicios del contenedor**.
+
+> 💡 Después de hacer el login una vez, tu sesión sigue activa aunque hagas
+> `docker compose down` y `docker compose up`, porque el token vive en
+> `student_workspace/`.
+
+### ⚠️ Riesgo de mantenimiento de pi-free
+
+`pi-free` se instala directamente desde un repositorio de GitHub
+(`github.com/apmantza/pi-free`), **no** desde el registro de npm. Esto significa:
+
+- **No tiene la misma garantía de proveniencia** que `gentle-pi` o `gentle-engram`.
+- El repositorio **podría cambiar o desaparecer**.
+- Está fijado a un commit específico al momento de construir la imagen.
+
+Si la ruta de instalación cambia en el futuro, consulta
+[pi.dev/packages/pi-free](https://pi.dev/packages/pi-free) para el comando actual.
+
+---
+
+## Agentes de IA alternativos
+
+Pi es el asistente por defecto; las alternativas son opcionales y se lanzan manualmente desde la terminal.
+
+| Agente | Lanzamiento | Modelos gratuitos |
+|---|---|---|
+| **OpenCode** | `opencode` | 75+ proveedores vía Models.dev, MCP incluido |
+| **Freebuff** | `freebuff` | DeepSeek V4 Flash, Kimi K2.7, MiniMax M2.7 incluidos |
+| **gentle-ai** | `gentle-ai` | Mejora cualquier agente con memoria Engram, SDD y skills |
+| **MiMo** | `mimo` | MiMo (Xiaomi) — canal gratuito `mimo-auto` sin API key, contexto de 1M tokens, 128K de salida, soporta imágenes. Gratis por tiempo limitado. |
+
+> **OpenSpec** (Fission-AI) ya está instalado como el framework SDD del proyecto. No se reinstala como agente.
+>
+> **Nota sobre gentle-ai**: gentle-ai configura solo OpenCode; Pi ya tiene gentle-pi; MiMo y Freebuff son agentes independientes no configurados por gentle-ai.
+
+Ejecuta `./agents.sh` para ver todos los agentes instalados y sus comandos de lanzamiento.
+
+---
+
+## Solución de problemas
+
+### "port is already allocated" (conflicto de puertos)
+
+**Síntoma**: `docker compose up` falla porque un puerto ya está en uso.
+
+**Detecta qué lo ocupa**:
+
+```bash
+ss -tlnp | grep -E ':(8443|8888|5555) '
+# o con netstat:
+netstat -tulpn | grep -E ':(8443|8888|5555) '
+```
+
+**Solución**: cambia el puerto en `.env`:
+
+```bash
+CODESERVER_PORT=9443     # en vez de 8443
+JUPYTER_PORT=8889        # en vez de 8888
+MLFLOW_PORT=5556         # en vez de 5555
+```
+
+Luego reinicia:
+
+```bash
+docker compose down
+docker compose up -d
+```
+
+### Archivos propiedad de `root` (problema de permisos)
+
+**Síntoma**: Los archivos en `student_workspace/` aparecen como propiedad de `root`
+en tu computadora, o code-server no puede escribir en el workspace.
+
+**Causa**: `PUID`/`PGID` en `.env` no coinciden con tu usuario.
+
+**Solución**:
+
+1. Verifica tus IDs en tu computadora:
+   ```bash
+   id -u   # ej. 1000
+   id -g   # ej. 1000
+   ```
+
+2. Actualiza `.env`:
+   ```bash
+   PUID=1000
+   PGID=1000
+   ```
+
+3. Recupera los archivos existentes (en tu computadora, **no** dentro del contenedor):
+   ```bash
+   sudo chown -R $(id -u):$(id -g) student_workspace/
+   ```
+
+4. Reinicia:
+   ```bash
+   docker compose down
+   docker compose up -d
+   ```
+
+### "command not found: python" o "command not found: node"
+
+El PATH debería incluir `/opt/venv/bin` y `/usr/local/bin`. Si no es así:
+
+```bash
+export PATH=/opt/venv/bin:/usr/local/bin:$PATH
+```
+
+Agrégalo a `~/.bashrc` (dentro del contenedor) si el problema persiste.
+
+### El contenedor arranca pero code-server no responde
+
+1. Revisa los logs:
+   ```bash
+   docker compose logs code-server
+   ```
+
+2. Verifica que el contenedor está corriendo:
+   ```bash
+   docker compose ps
+   ```
+
+3. Asegúrate de que el puerto en `.env` coincide con la URL que abres.
+   Si cambiaste `CODESERVER_PORT=9443`, abre `http://localhost:9443`.
+
+### Pi pierde la autenticación al reiniciar
+
+Los tokens OAuth que no se guardan en `student_workspace/` se pierden al recrear el
+contenedor. Revisa la "Opción B" de la sección de Pi para hacer el flujo OAuth una
+sola vez y persistir el token en el workspace.
+
+---
+
+## Comandos rápidos
+
+```bash
+# Construir la imagen
+docker compose build
+
+# Iniciar en segundo plano
+docker compose up -d
+
+# Detener
+docker compose down
+
+# Ver logs en vivo
+docker compose logs -f
+
+# Abrir una shell dentro del contenedor
+docker compose exec code-server /bin/bash
+
+# Reconstruir sin caché (solo si una capa se quedó trabada)
+docker compose build --no-cache
+```
+
+---
+
+## Variables de entorno (`.env`)
+
+| Variable | Valor por defecto | Para qué sirve |
+|---|---|---|
+| `PUID` | `1000` | Tu ID de usuario (ejecuta `id -u`) |
+| `PGID` | `1000` | Tu ID de grupo (ejecuta `id -g`) |
+| `TZ` | `Etc/UTC` | Zona horaria del contenedor |
+| `PASSWORD` | `student` | Contraseña de code-server (cámbiala si compartes la computadora) |
+| `HASHED_PASSWORD` | _(vacío)_ | Alternativa a PASSWORD (hash bcrypt) |
+| `CODESERVER_PORT` | `8443` | Puerto del IDE en el host |
+| `JUPYTER_PORT` | `8888` | Puerto de Jupyter en el host |
+| `MLFLOW_PORT` | `5555` | Puerto de MLflow en el host |
+| `DEVICE` | `cpu` | `cpu` o `gpu` (GPU requiere NVIDIA Toolkit) |
+| `PI_FREE_ONLY` | `1` | Bloquear Pi a proveedores gratuitos |
+| `VITE_API_BASE_URL` | `https://astryx.atmeta.com/` | URL base del API para el frontend |
+| `KILO_API_KEY` | _(comentado)_ | Clave API del proveedor Pi (opcional) |
+| `CLINE_API_KEY` | _(comentado)_ | Clave API del proveedor Pi (opcional) |
+| `OPENROUTER_API_KEY` | _(comentado)_ | Clave API del proveedor Pi (opcional) |
+
+---
+
+## ¿Quieres usar GPU?
+
+Por defecto el entorno usa **solo CPU** para PyTorch y TensorFlow (evita descargas
+de varios GB de CUDA). Si tu curso necesita GPU:
+
+1. Instala el [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/)
+   en tu computadora.
+2. En `.env`, cambia:
+   ```bash
+   DEVICE=gpu
+   ```
+3. Descomenta el bloque `deploy.resources` en `docker-compose.yml` (ver los
+   comentarios en ese archivo).
+4. Descomenta las líneas GPU en `requirements.txt` y comenta las líneas CPU.
+5. Reconstruye:
+   ```bash
+   docker compose build
+   docker compose up -d
+   ```
+6. Verifica dentro del contenedor:
+   ```bash
+   nvidia-smi    # debería listar tu GPU
+   ```
+
+---
+
+## ¿Dónde está todo?
+
+| Archivo / Carpeta | Qué es |
+|---|---|
+| `Dockerfile` | Receta de construcción de la imagen (multi-etapa, comentada) |
+| `docker-compose.yml` | Orquestación del contenedor, puertos, volúmenes |
+| `requirements.txt` | Paquetes de Python con versiones fijadas |
+| `package.json` | Plantilla de inicio para proyectos frontend |
+| `.env.example` | Plantilla de referencia (documenta todas las variables) |
+| `.env` | **Configuración lista para usar** — viene con valores por defecto; edítalo solo para personalizar |
+| `student_workspace/` | **Tu trabajo** — persiste en tu computadora |
+| `docs/deployment-guide.md` | Guía técnica detallada (en inglés) |
+
+---
+
+## Ayuda adicional
+
+- **Guía técnica completa** (en inglés): `docs/deployment-guide.md`
+- **Documentación de code-server**: [docs.linuxserver.io](https://docs.linuxserver.io/images/docker-code-server/)
+- **Paquetes de Pi**: [pi.dev/packages](https://pi.dev/packages)
+
+> Si algo no funciona, revisa primero la sección **Solución de problemas**.
+> La mayoría de los problemas son conflictos de puertos o permisos de archivo.

@@ -1,0 +1,26 @@
+{
+  "name": "student-project-starter",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Starter template for student frontend projects. Copy this package.json into a new project folder and run 'npm install'. For the API base URL, set VITE_API_BASE_URL=https://astryx.atmeta.com/ in your project .env (student-side config, not baked into image).",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
+    "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,css,json}\"",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-router-dom": "6.26.2",
+    "axios": "1.7.7"
+  },
+  "devDependencies": {
+    "eslint": "9.12.0",
+    "prettier": "3.3.3",
+    "vitest": "2.1.2",
+    "@testing-library/react": "16.0.1"
+  }
+}

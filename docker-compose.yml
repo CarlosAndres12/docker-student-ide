@@ -1,0 +1,97 @@
+# =============================================================================
+# docker-student-ide — docker-compose.yml
+# =============================================================================
+# This compose file is SELF-SUFFICIENT — it runs with no .env file at all,
+# thanks to inline ${VAR:-default} defaults for every variable.
+#
+# The optional .env file is an OVERRIDE LAYER: when present, its values take
+# precedence over the inline defaults.  You can edit .env to customise ports,
+# password, or PUID/PGID without touching this file.
+#
+# One `docker compose up` starts code-server with Node 22, Python 3.11 ML/DL
+# stack, Jupyter, MLflow, and the Pi AI assistant — all in your browser.
+#
+# PORT STRATEGY
+#   ports:   (host-mapped)   — browser-facing ports: code-server IDE (8443),
+#                               Jupyter (8888), MLflow UI (5555).
+#                               These must be reachable from the host browser.
+#   expose:  (container-only) — dev server range and backend ports reached
+#                               through code-server's built-in port forwarding.
+#                               No host mapping needed, minimising conflicts.
+#
+# GPU SUPPORT
+#   By default no GPU resources are reserved (CPU-only).
+#   To enable GPU: uncomment the `deploy:` block below AND set DEVICE=gpu
+#   in .env.  The NVIDIA Container Toolkit must be installed on the host.
+# =============================================================================
+
+services:
+  code-server:
+    build: .
+    container_name: docker-student-ide
+
+    # ── Environment ──────────────────────────────────────────────────────────
+    # PUID/PGID ensure files in the bind mount are owned by the host user.
+    # PASSWORD / HASHED_PASSWORD are read by the linuxserver base image.
+    # PI_FREE_ONLY locks Pi to free/zero-cost providers.
+    env_file: .env
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-Etc/UTC}
+      - PASSWORD=${PASSWORD:-student}
+      - HASHED_PASSWORD=${HASHED_PASSWORD:-}
+      - PI_FREE_ONLY=${PI_FREE_ONLY:-1}
+
+    # ── Volumes ──────────────────────────────────────────────────────────────
+    # Bind-mount the student workspace so projects persist across restarts.
+    # linuxserver/code-server uses /config/workspace as the default open dir.
+    volumes:
+      - ./student_workspace:/config/workspace
+
+# ── Host-Mapped Ports (browser-facing) ────────────────────────────────────
+    # These are reachable from the host browser.  Override via .env when the
+    # default port is already in use on the host.
+    #
+    # 8443 : code-server IDE (primary UI)        ← CODESERVER_PORT
+    # 8888 : Jupyter / JupyterLab notebook UI    ← JUPYTER_PORT
+    # 5555 : MLflow experiment tracking UI        ← MLFLOW_PORT
+    # 5173 : Vite default dev server             ← VITE_PORT
+    # 3000 : Common dev server (CRA, Next.js)    ← DEV_PORT_3000
+    # 3001 : Common dev server alt               ← DEV_PORT_3001
+    # 5000 : Python Flask / backend              ← BACKEND_PORT_5000
+    # 8000 : Python Django / FastAPI / backend   ← BACKEND_PORT_8000
+    #
+    # Dev ports are published directly to the host so students can open
+    # localhost:5173 (etc.) in their browser immediately.  code-server's
+    # built-in "Ports" tab still forwards ANY other port a dev server binds
+    # to (3000-9999) for ports not listed here.
+    ports:
+      - "${CODESERVER_PORT:-8443}:8443"
+      - "${JUPYTER_PORT:-8888}:8888"
+      - "${MLFLOW_PORT:-5555}:5555"
+      - "${VITE_PORT:-5173}:5173"
+      - "${DEV_PORT_3000:-3000}:3000"
+      - "${DEV_PORT_3001:-3001}:3001"
+      - "${BACKEND_PORT_5000:-5000}:5000"
+      - "${BACKEND_PORT_8000:-8000}:8000"
+
+    # ── Container-Internal Exposed Ports (code-server port forwarding) ──────
+    # code-server's built-in port forwarding (click "Ports" in the IDE
+    # sidebar) proxies ANY port a dev server binds to (3000-9999) to the
+    # browser, even ports not published above.  This is the fallback for
+    # exotic ports or when a published host port is already in use.
+    # No `expose:` block is needed — code-server forwards regardless.
+
+    # ── GPU Support (disabled by default) ────────────────────────────────────
+    # Uncomment the entire `deploy:` block when DEVICE=gpu is set in .env.
+    # Requires NVIDIA Container Toolkit on the host:
+    #   https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/
+    #
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
