@@ -1,8 +1,39 @@
 # docker-student-ide — Entorno de Desarrollo para Estudiantes
 
-Un entorno de desarrollo completo en el navegador, listo con **Node.js 22**, **Python 3.11** (stack de ML/DL), **Jupyter**, **MLflow** y el asistente de IA **Pi** — todo con un solo comando.
+Un entorno de desarrollo completo en el navegador, listo con **Node.js 22**, **Python 3.11** (stack de ML/DL), **Jupyter**, **MLflow** y **5 asistentes de IA** (Pi, OpenCode, Freebuff, gentle-ai, MiMo) — todo con un solo comando.
 
 Sin instalar nada en tu computadora. Solo necesitas Docker — y los scripts lo instalan si hace falta.
+
+---
+
+## Instalación desde GitHub
+
+Clona este repositorio y ejecuta el script de inicio. El script instala Docker
+automáticamente si no lo tienes.
+
+```bash
+# 1. Clona el repositorio
+git clone https://github.com/CarlosAndres12/docker-student-ide.git
+cd docker-student-ide
+
+# 2. Inicia el entorno (instala Docker si hace falta)
+./start.sh                    # macOS / Linux
+# .\start.ps1                 # Windows (PowerShell)
+```
+
+> ⏱️ **La primera vez tarda entre 10 y 20 minutos** (descarga e instala todo el stack).
+> Las siguientes veces es mucho más rápido gracias a la caché de Docker.
+
+Una vez que termine, abre **http://localhost:8443** en tu navegador y usa la
+contraseña **`student`**.
+
+Si ya tienes Docker instalado y prefieres no usar el script:
+
+```bash
+git clone https://github.com/CarlosAndres12/docker-student-ide.git
+cd docker-student-ide
+docker compose up
+```
 
 ---
 
@@ -30,34 +61,9 @@ Todo lo que guardes queda en la carpeta `student_workspace/` de tu computadora, 
 
 ---
 
-## Puesta en marcha (1 comando)
+## Ejecución en segundo plano
 
-Elige tu sistema operativo:
-
-| Sistema | Comando |
-|---|---|
-| **macOS / Linux** | `./start.sh` |
-| **Windows (PowerShell)** | `.\start.ps1` |
-
-El script:
-- Instala Docker si no lo tienes (Docker Desktop en macOS/Windows, `docker.io` en Linux).
-- Espera a que Docker arranque y verifica que todo funcione.
-- Configura automáticamente los permisos de archivos (PUID/PGID).
-- Inicia el entorno con `docker compose up`.
-
-Si prefieres no usar el script (ya tienes Docker instalado):
-
-```bash
-docker compose up
-```
-
-> ℹ️ La contraseña por defecto de code-server es **`student`**.
-> Si compartes la computadora, cámbiala en `.env` (ver "Personalización opcional").
-
-⏱️ **La primera vez tarda entre 10 y 20 minutos** (descarga e instala todo el stack).
-Las siguientes veces es mucho más rápido gracias a la caché de Docker.
-
-Para ejecutar en segundo plano:
+Para ejecutar en segundo plano (el terminal queda libre):
 
 ```bash
 ./start.sh -d          # macOS / Linux
@@ -66,13 +72,15 @@ Para ejecutar en segundo plano:
 docker compose up -d
 ```
 
-Para detenerlo:
+Para detener el entorno:
 
 ```bash
 docker compose down
 ```
 
-### Personalización opcional
+---
+
+## Configuración (opcional)
 
 El archivo `.env` ya viene listo para usar. Solo edítalo si necesitas cambiar
 **cualquiera** de estos valores (todos son opcionales):
@@ -103,20 +111,16 @@ docker compose up -d
 
 ## Primer ingreso
 
-1. Abre tu navegador en **http://localhost:8443**
-   (o el puerto configurado en `CODESERVER_PORT` dentro de `.env`).
+1. Abre **http://localhost:8443** en tu navegador e ingresa la contraseña.
 
-2. Ingresa la contraseña: **`student`** (es la que viene por defecto en `.env`).
-   Si cambiaste `PASSWORD` en `.env`, usa esa.
-
-3. code-server abre en `/config/workspace` — esta es tu carpeta `student_workspace/`
+2. code-server abre en `/config/workspace` — esta es tu carpeta `student_workspace/`
    de tu computadora. **Todo lo que crees aquí persiste entre reinicios.**
 
-4. Abre una terminal dentro de code-server (**Terminal → New Terminal**) y verifica
-   que todo funcione (ver sección "Verificación rápida").
+3. Abre una terminal dentro de code-server (**Terminal → New Terminal**) y verifica
+   que todo funcione (ver sección "Verificación rápida" más abajo).
 
 > ⚠️ **Si compartes la computadora**, cambia la contraseña por defecto editando
-> `PASSWORD` en `.env` (ver "Personalización opcional" arriba).
+> `PASSWORD` en `.env` (ver "Configuración (opcional)" arriba).
 
 ---
 
