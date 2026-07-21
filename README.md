@@ -6,19 +6,21 @@ Sin instalar nada en tu computadora. Solo necesitas Docker — y los scripts lo 
 
 ---
 
-## Instalación desde GitHub
+## Instalación (un solo comando)
 
-Clona este repositorio y ejecuta el script de inicio. El script instala Docker
-automáticamente si no lo tienes.
+Copia y pega el comando de abajo en tu terminal. El script clona el repositorio,
+instala Docker si hace falta e inicia el entorno automáticamente.
+
+**macOS / Linux**
 
 ```bash
-# 1. Clona el repositorio
-git clone https://github.com/CarlosAndres12/docker-student-ide.git
-cd docker-student-ide
+curl -fsSL https://raw.githubusercontent.com/CarlosAndres12/docker-student-ide/main/scripts/install.sh | bash
+```
 
-# 2. Inicia el entorno (instala Docker si hace falta)
-./start.sh                    # macOS / Linux
-# .\start.ps1                 # Windows (PowerShell)
+**Windows (PowerShell)**
+
+```powershell
+irm https://raw.githubusercontent.com/CarlosAndres12/docker-student-ide/main/scripts/install.ps1 | iex
 ```
 
 > ⏱️ **La primera vez tarda entre 10 y 20 minutos** (descarga e instala todo el stack).
@@ -27,7 +29,18 @@ cd docker-student-ide
 Una vez que termine, abre **http://localhost:8443** en tu navegador y usa la
 contraseña **`student`**.
 
-Si ya tienes Docker instalado y prefieres no usar el script:
+### Alternativa: instalación manual
+
+Si prefieres clonar el repositorio manualmente:
+
+```bash
+git clone https://github.com/CarlosAndres12/docker-student-ide.git
+cd docker-student-ide
+./start.sh                    # macOS / Linux
+# .\start.ps1                 # Windows (PowerShell)
+```
+
+O si ya tienes Docker y no quieres usar los scripts:
 
 ```bash
 git clone https://github.com/CarlosAndres12/docker-student-ide.git
