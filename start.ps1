@@ -16,7 +16,7 @@
     If winget/choco are unavailable, Docker Desktop must be installed manually.
 #>
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 
 # -- Helper: bilingual message ------------------------------------------------
 function Write-Message {
@@ -96,35 +96,65 @@ if ($dockerPath) {
 }
 
 # -- Section 2: Wait for Docker daemon (poll docker info) ---------------------
-Write-Message "Esperando a que el servicio Docker este listo..." "Waiting for the Docker daemon to be ready..."
-$maxRetries = 24   # 24 * 5 = 120 seconds
-$retryCount = 0
-$dockerReady = $false
 
-while ($retryCount -lt $maxRetries) {
-    $result = docker info 2>&1
-    if ($LASTEXITCODE -eq 0) {
-        $dockerReady = $true
-        break
-    }
-    $retryCount++
-    if ($retryCount -eq 1) {
-        Write-Host "   [...] Docker aun no responde. Esperando... (hasta 2 minutos)"
-        Write-Host "      Docker not responding yet. Waiting... (up to 2 minutes)"
-    }
-    Start-Sleep -Seconds 5
+# Detect Docker Desktop binary (if installed)
+$dockerDesktopPath = "$env:ProgramFiles\Docker\Docker\Docker Desktop.exe"
+$ddAltPath = "$env:LOCALAPPDATA\Docker\Docker Desktop\Docker Desktop.exe"
+$ddBin = $null
+if (Test-Path $dockerDesktopPath) {
+    $ddBin = $dockerDesktopPath
+} elseif (Test-Path $ddAltPath) {
+    $ddBin = $ddAltPath
 }
 
-if (-not $dockerReady) {
-    Write-Message "Docker no arranco despues de 2 minutos." "Docker did not start after 2 minutes."
-    Write-Host ""
-    Write-Host "   [i] Asegurate de que Docker Desktop este abierto (menu Inicio -> Docker Desktop)."
-    Write-Host "      Make sure Docker Desktop is open (Start Menu -> Docker Desktop)."
-    Write-Host "   [i] Revisa el icono en la bandeja del sistema -- debe decir 'Docker Desktop is running'."
-    Write-Host "      Check the system tray icon -- it should say 'Docker Desktop is running'."
-    Write-Host "   [i] Luego ejecuta este script de nuevo."
-    Write-Host "      Then run this script again."
-    exit 1
+# Quick check: is Docker already running?
+$null = docker info 2>&1
+if ($LASTEXITCODE -eq 0) {
+    Write-Message "[OK] Docker ya esta corriendo." "Docker already running."
+} else {
+    if ($ddBin) {
+        Write-Message "Docker Desktop encontrado pero no esta corriendo. Iniciandolo..." "Docker Desktop found but not running. Starting it..."
+        Start-Process -FilePath $ddBin
+        Write-Host "   Docker Desktop se esta abriendo. Esperando a que termine de iniciar..."
+        Write-Host "   Docker Desktop is starting up. Waiting for it to be ready..."
+        # Docker Desktop takes longer on first cold start; give it 5 minutes
+        $maxRetries = 60   # 60 * 5 = 300 seconds
+    } else {
+        Write-Host "[i] Docker CLI encontrado pero el daemon no responde."
+        Write-Host "   Docker CLI found but daemon is not responding."
+        Write-Host "   Abre Docker Desktop desde el menu Inicio / Open Docker Desktop from Start Menu."
+        $maxRetries = 24   # 24 * 5 = 120 seconds
+    }
+
+    Write-Message "Esperando a que el servicio Docker este listo..." "Waiting for the Docker daemon to be ready..."
+    $retryCount = 0
+    $dockerReady = $false
+
+    while ($retryCount -lt $maxRetries) {
+        $null = docker info 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            $dockerReady = $true
+            break
+        }
+        $retryCount++
+        if ($retryCount -eq 1) {
+            Write-Host "   [...] Docker aun no responde. Esperando..."
+            Write-Host "      Docker not responding yet. Waiting..."
+        }
+        Start-Sleep -Seconds 5
+    }
+
+    if (-not $dockerReady) {
+        Write-Message "Docker no arranco despues de la espera." "Docker did not start after waiting."
+        Write-Host ""
+        Write-Host "   [i] Asegurate de que Docker Desktop este abierto (menu Inicio -> Docker Desktop)."
+        Write-Host "      Make sure Docker Desktop is open (Start Menu -> Docker Desktop)."
+        Write-Host "   [i] Revisa el icono en la bandeja del sistema -- debe decir 'Docker Desktop is running'."
+        Write-Host "      Check the system tray icon -- it should say 'Docker Desktop is running'."
+        Write-Host "   [i] Luego ejecuta este script de nuevo."
+        Write-Host "      Then run this script again."
+        exit 1
+    }
 }
 
 Write-Message "[OK] Docker esta funcionando." "Docker is running."

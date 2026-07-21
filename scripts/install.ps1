@@ -34,7 +34,7 @@ Write-Host "[*] Cloning docker-student-ide..."
 if (Test-Path $repoDir) {
     Write-Host "[*] Directory $repoDir already exists. Using existing clone."
 } else {
-    git clone $repoUrl $repoDir 2>&1
+    $null = git clone $repoUrl $repoDir 2>&1
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Error: Failed to clone repository. Check your internet connection."
         exit 1
