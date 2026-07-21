@@ -3,11 +3,13 @@
     docker-student-ide Bootstrap Script for Windows (PowerShell)
 .DESCRIPTION
     This script:
+      0. Checks if WSL is installed (Docker Desktop requires WSL 2 on Windows).
+         If missing, offers to auto-install it (with permission).
       1. Checks if Docker Desktop is installed.  If missing, installs it:
            - via winget (Windows Package Manager, primary)
            - via choco  (Chocolatey, fallback)
            - or provides a direct download link
-      2. Waits for the Docker daemon to start (polls `docker info` up to 120s).
+      2. Waits for the Docker daemon to start (polls `docker info`).
       3. Checks that `docker compose` (v2) is available.
       4. Sets PUID=1000 / PGID=1000 in .env (idempotent).
       5. Runs `docker compose up` with any passed arguments.
@@ -23,6 +25,65 @@ function Write-Message {
     param([string]$Spanish, [string]$English)
     Write-Host "[*] $Spanish"
     Write-Host "   $English"
+}
+
+# -- Section 0: Check WSL (Windows only -- Docker Desktop requires WSL 2) --------
+$wslCmd = Get-Command "wsl" -ErrorAction SilentlyContinue
+if ($wslCmd) {
+    $null = wsl --status 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Message "WSL no esta instalado o no funciona. Docker Desktop lo necesita en Windows." "WSL is not installed or not functional. Docker Desktop requires it on Windows."
+
+        $respuesta = Read-Host "   ?Quieres instalarlo ahora? / Install it now? (y/N)"
+
+        if ($respuesta -eq "y" -or $respuesta -eq "Y") {
+            Write-Message "Instalando WSL (requiere permisos de administrador)..." "Installing WSL (requires admin privileges)..."
+            Write-Host "   Se abrira una ventana de UAC. Aceptala para continuar."
+            Write-Host "   A UAC prompt will appear. Accept it to continue."
+
+            try {
+                Start-Process -FilePath "wsl" -ArgumentList "--install" -Verb RunAs -Wait
+                Write-Host ""
+                Write-Host "[!]  WSL instalado. REINICIA tu PC y ejecuta este script de nuevo."
+                Write-Host "   WSL installed. REBOOT your PC and run this script again."
+                Write-Host ""
+                exit 0
+            } catch {
+                Write-Host ""
+                Write-Message "No se pudo instalar WSL automaticamente." "Could not auto-install WSL."
+                Write-Host "   Instalalo manualmente en PowerShell como Administrador:"
+                Write-Host "   Install it manually in PowerShell as Administrator:"
+                Write-Host "     wsl --install"
+                Write-Host "   Luego REINICIA y ejecuta este script de nuevo."
+                Write-Host "   Then REBOOT and run this script again."
+                exit 1
+            }
+        } else {
+            Write-Host ""
+            Write-Message "Instala WSL manualmente y vuelve a ejecutar este script." "Install WSL manually and re-run this script."
+            Write-Host "   En PowerShell como Administrador ejecuta:"
+            Write-Host "   In PowerShell as Administrator run:"
+            Write-Host "     wsl --install"
+            Write-Host "   Luego REINICIA tu PC."
+            Write-Host "   Then REBOOT your PC."
+            Write-Host ""
+            Write-Host "   Documentacion: https://learn.microsoft.com/en-us/windows/wsl/install"
+            exit 1
+        }
+    }
+    # WSL is functional -- continue to Docker detection
+} else {
+    # wsl.exe not found (pre-2004 Windows 10, or WSL feature not available)
+    Write-Host ""
+    Write-Message "WSL no encontrado en este sistema." "WSL not found on this system."
+    Write-Host "   Docker Desktop en Windows requiere WSL 2."
+    Write-Host "   Docker Desktop on Windows requires WSL 2."
+    Write-Host "   Asegurate de que tu version de Windows sea 10 (build 2004+) o 11."
+    Write-Host "   Make sure your Windows version is 10 (build 2004+) or 11."
+    Write-Host "   Luego instala WSL desde:"
+    Write-Host "   Then install WSL from:"
+    Write-Host "     https://learn.microsoft.com/en-us/windows/wsl/install"
+    exit 1
 }
 
 # -- Section 1: Check / Install Docker Desktop --------------------------------
