@@ -192,24 +192,102 @@ fi
 # ── Section 4: Check if Docker daemon is running ─────────────────────────────
 echo "⏳ Verificando que el servicio Docker esté corriendo..."
 echo "   Checking that the Docker daemon is running..."
+
 if ! docker info >/dev/null 2>&1; then
     echo "⚠️  El servicio Docker no está respondiendo."
     echo "   The Docker daemon is not responding."
+
+    # Try to auto-start the daemon
     case "$OS" in
-        macos|windows)
-            echo "   🖥️  Abre Docker Desktop desde tu carpeta de Aplicaciones / menú Inicio."
-            echo "      Open Docker Desktop from your Applications folder / Start Menu."
-            echo "   ⏳ Espera a que el ícono muestre 'Running' y luego ejecuta este script de nuevo."
-            echo "      Wait for the icon to show 'Running' then run this script again."
-            ;;
         linux)
-            echo "   🐧 Intenta iniciar el servicio manualmente:"
-            echo "      Try starting the service manually:"
-            echo "        sudo systemctl start docker"
-            echo "      Luego ejecuta este script de nuevo / then run this script again."
+            echo "   🐧 Intentando iniciar el servicio Docker automáticamente..."
+            echo "      Trying to auto-start the Docker daemon..."
+            if command -v systemctl >/dev/null 2>&1; then
+                if [ "$(id -u)" -eq 0 ]; then
+                    systemctl start docker 2>/dev/null || systemctl start docker.service 2>/dev/null || true
+                else
+                    sudo systemctl start docker 2>/dev/null || sudo systemctl start docker.service 2>/dev/null || true
+                fi
+            elif command -v service >/dev/null 2>&1; then
+                if [ "$(id -u)" -eq 0 ]; then
+                    service docker start 2>/dev/null || true
+                else
+                    sudo service docker start 2>/dev/null || true
+                fi
+            fi
+            MAX_WAIT=120
+            ;;
+        macos)
+            echo "   🍎 Intentando abrir Docker Desktop automáticamente..."
+            echo "      Trying to auto-launch Docker Desktop..."
+            open -a Docker 2>/dev/null || true
+            MAX_WAIT=120
+            ;;
+        windows)
+            echo "   🪟 Abre Docker Desktop desde el menú Inicio."
+            echo "      Open Docker Desktop from your Start Menu."
+            echo "   ⏳ Espera a que el ícono muestre 'Running' continuará automáticamente..."
+            echo "      Once the icon shows 'Running', the script will continue..."
+            MAX_WAIT=120
             ;;
     esac
-    exit 1
+
+    # Poll docker info until ready
+    echo "   ⏳ Esperando a que Docker esté listo (hasta ${MAX_WAIT}s)..."
+    echo "      Waiting for Docker to be ready (up to ${MAX_WAIT}s)..."
+    ELAPSED=0
+    while [ "$ELAPSED" -lt "$MAX_WAIT" ]; do
+        if docker info >/dev/null 2>&1; then
+            break
+        fi
+        sleep 5
+        ELAPSED=$((ELAPSED + 5))
+        if [ $((ELAPSED % 20)) -eq 0 ]; then
+            printf "   ... %s/%ss\n" "$ELAPSED" "$MAX_WAIT"
+        fi
+    done
+
+    # Final check
+    if docker info >/dev/null 2>&1; then
+        echo "   ✅ Docker respondió después de ${ELAPSED}s."
+        echo "      Docker responded after ${ELAPSED}s."
+    else
+        echo "❌ Docker no respondió después de ${MAX_WAIT}s."
+        echo "   Docker did not respond after ${MAX_WAIT}s."
+        echo ""
+        case "$OS" in
+            linux)
+                # Check if it's a permissions issue
+                if groups "$(whoami)" 2>/dev/null | grep -q '\bdocker\b'; then
+                    echo "   🔍 Estás en el grupo 'docker' pero el daemon no responde."
+                    echo "      You're in the 'docker' group but the daemon isn't responding."
+                    echo "   👉 Verifica el servicio: sudo systemctl status docker"
+                    echo "      Check the service: sudo systemctl status docker"
+                    echo "   👉 O revisa los logs: sudo journalctl -u docker -n 50"
+                    echo "      Or check the logs: sudo journalctl -u docker -n 50"
+                else
+                    echo "   🔍 Puede que necesites permisos. Agrega tu usuario al grupo 'docker':"
+                    echo "      You may need permissions. Add your user to the 'docker' group:"
+                    echo "        sudo usermod -aG docker \$(whoami)"
+                    echo "      Luego CIERRA SESIÓN y vuelve a entrar."
+                    echo "      Then LOG OUT and log back in."
+                fi
+                ;;
+            macos)
+                echo "   🔍 Abre Docker Desktop manualmente desde /Applications."
+                echo "      Open Docker Desktop manually from /Applications."
+                echo "   Asegúrate de que el ícono en la barra de menú muestre 'Running'."
+                echo "   Make sure the menu bar icon shows 'Running'."
+                ;;
+            windows)
+                echo "   🔍 Abre Docker Desktop desde el menú Inicio."
+                echo "      Open Docker Desktop from the Start Menu."
+                echo "   Asegúrate de que el ícono en la bandeja del sistema muestre 'Running'."
+                echo "   Make sure the system tray icon shows 'Running'."
+                ;;
+        esac
+        exit 1
+    fi
 fi
 echo "✅ Docker está funcionando / Docker is running."
 
