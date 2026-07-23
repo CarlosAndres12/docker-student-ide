@@ -27,6 +27,19 @@ function Write-Message {
     Write-Host "   $English"
 }
 
+# -- Helper: pause before exit (prevents terminal from closing on error) ----------
+function Exit-WithPause {
+    param([int]$Code = 0)
+    if ($Code -ne 0) {
+        Write-Host ""
+        Write-Host "[!]  Ocurrio un error (codigo $Code). Revisa el mensaje arriba."
+        Write-Host "   An error occurred (code $Code). Check the message above."
+    }
+    Write-Host ""
+    Read-Host "Presiona Enter para salir / Press Enter to exit"
+    exit $Code
+}
+
 # -- Section 0: Check WSL (Windows only -- Docker Desktop requires WSL 2) --------
 $wslCmd = Get-Command "wsl" -ErrorAction SilentlyContinue
 if ($wslCmd) {
@@ -47,7 +60,7 @@ if ($wslCmd) {
                 Write-Host "[!]  WSL instalado. REINICIA tu PC y ejecuta este script de nuevo."
                 Write-Host "   WSL installed. REBOOT your PC and run this script again."
                 Write-Host ""
-                exit 0
+                Exit-WithPause -Code 0
             } catch {
                 Write-Host ""
                 Write-Message "No se pudo instalar WSL automaticamente." "Could not auto-install WSL."
@@ -56,7 +69,7 @@ if ($wslCmd) {
                 Write-Host "     wsl --install"
                 Write-Host "   Luego REINICIA y ejecuta este script de nuevo."
                 Write-Host "   Then REBOOT and run this script again."
-                exit 1
+                Exit-WithPause -Code 1
             }
         } else {
             Write-Host ""
@@ -68,7 +81,7 @@ if ($wslCmd) {
             Write-Host "   Then REBOOT your PC."
             Write-Host ""
             Write-Host "   Documentacion: https://learn.microsoft.com/en-us/windows/wsl/install"
-            exit 1
+            Exit-WithPause -Code 1
         }
     }
     # WSL is functional -- continue to Docker detection
@@ -83,7 +96,7 @@ if ($wslCmd) {
     Write-Host "   Luego instala WSL desde:"
     Write-Host "   Then install WSL from:"
     Write-Host "     https://learn.microsoft.com/en-us/windows/wsl/install"
-    exit 1
+    Exit-WithPause -Code 1
 }
 
 # -- Section 1: Check / Install Docker Desktop --------------------------------
@@ -145,7 +158,7 @@ if ($dockerPath) {
         Write-Host "      https://docs.docker.com/desktop/install/windows-install/"
         Write-Host ""
         Write-Host "   Luego ejecuta este script de nuevo / Then run this script again."
-        exit 1
+        Exit-WithPause -Code 1
     }
 
     Write-Host ""
@@ -214,7 +227,7 @@ if ($LASTEXITCODE -eq 0) {
         Write-Host "      Check the system tray icon -- it should say 'Docker Desktop is running'."
         Write-Host "   [i] Luego ejecuta este script de nuevo."
         Write-Host "      Then run this script again."
-        exit 1
+        Exit-WithPause -Code 1
     }
 }
 
@@ -226,7 +239,7 @@ if ($LASTEXITCODE -ne 0) {
     Write-Message "docker compose (v2) no disponible. ?Version antigua de Docker Desktop?" "docker compose (v2) not available. Outdated Docker Desktop?"
     Write-Host "   Actualiza Docker Desktop desde https://docs.docker.com/desktop/install/windows-install/"
     Write-Host "   Update Docker Desktop from the link above."
-    exit 1
+    Exit-WithPause -Code 1
 }
 Write-Message "[OK] docker compose (v2) disponible." "docker compose (v2) available."
 
@@ -285,4 +298,4 @@ if ($args.Count -gt 0) {
     & docker compose up
 }
 
-exit $LASTEXITCODE
+Exit-WithPause -Code $LASTEXITCODE
