@@ -335,6 +335,10 @@ fi
 # ── Section 8: Run docker compose ────────────────────────────────────────────
 echo "🚀 Iniciando docker-student-ide..."
 echo "   Starting docker-student-ide..."
+echo ""
+echo "🌐 Accede al IDE en: http://localhost:8443"
+echo "   Access the IDE at: http://localhost:8443"
+echo ""
 
 if [ "$COMPOSE_CMD" = "docker compose" ]; then
     exec docker compose up "$@"

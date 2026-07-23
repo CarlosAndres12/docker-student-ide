@@ -290,6 +290,9 @@ Write-Message "[*] .env configurado con PUID=1000 PGID=1000." ".env configured w
 # -- Section 5: Run docker compose up -----------------------------------------
 Write-Message "[>>] Iniciando docker-student-ide..." "Starting docker-student-ide..."
 Write-Host ""
+Write-Host "[i] Accede al IDE en: http://localhost:8443"
+Write-Host "    Access the IDE at: http://localhost:8443"
+Write-Host ""
 
 # Pass through any arguments
 if ($args.Count -gt 0) {
