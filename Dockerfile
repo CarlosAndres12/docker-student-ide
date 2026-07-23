@@ -19,21 +19,29 @@ ENV DEBIAN_FRONTEND=noninteractive
 # ── System Dependencies ──────────────────────────────────────────────────────
 # git is needed to clone pi-free at a pinned commit.
 # build-essential provides compilers for some Python wheels.
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    software-properties-common \
-    curl \
-    git \
-    build-essential \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && \
+    for i in $(seq 1 5); do \
+        apt-get install -y --no-install-recommends --fix-missing \
+            software-properties-common \
+            curl \
+            git \
+            build-essential \
+            ca-certificates \
+            && break || sleep 10; \
+    done && \
+    rm -rf /var/lib/apt/lists/*
 
 # ── Python 3.11 (pinned minor) via deadsnakes PPA ────────────────────────────
 RUN add-apt-repository ppa:deadsnakes/ppa && \
-    apt-get update && apt-get install -y --no-install-recommends \
-    python3.11 \
-    python3.11-venv \
-    python3.11-dev \
-    && rm -rf /var/lib/apt/lists/*
+    apt-get update && \
+    for i in $(seq 1 5); do \
+        apt-get install -y --no-install-recommends --fix-missing \
+            python3.11 \
+            python3.11-venv \
+            python3.11-dev \
+            && break || sleep 10; \
+    done && \
+    rm -rf /var/lib/apt/lists/*
 
 # Create the virtual environment at a known path
 ENV VENV_PATH=/opt/venv
@@ -200,12 +208,20 @@ FROM lscr.io/linuxserver/code-server:4.93.1
 # `python`/`pip`/`jupyter` all fail with "command not found".
 # We add the deadsnakes PPA (same source as the deps stage) and install only the
 # runtime binary (no -dev headers, no build toolchain).
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    software-properties-common \
-    && add-apt-repository ppa:deadsnakes/ppa && \
-    apt-get update && apt-get install -y --no-install-recommends \
-    python3.11 \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && \
+    for i in $(seq 1 5); do \
+        apt-get install -y --no-install-recommends --fix-missing \
+            software-properties-common \
+            && break || sleep 10; \
+    done && \
+    add-apt-repository ppa:deadsnakes/ppa && \
+    apt-get update && \
+    for i in $(seq 1 5); do \
+        apt-get install -y --no-install-recommends --fix-missing \
+            python3.11 \
+            && break || sleep 10; \
+    done && \
+    rm -rf /var/lib/apt/lists/*
 COPY --from=deps /opt/venv /opt/venv
 ENV PATH=/opt/venv/bin:$PATH
 
