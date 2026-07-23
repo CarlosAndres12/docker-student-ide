@@ -18,6 +18,7 @@ and the Pi AI assistant — all behind a single `docker compose up`.
 9. [Build Time & Image Size](#9-build-time--image-size)
 10. [Troubleshooting](#10-troubleshooting)
 11. [Alternative AI Agents](#11-alternative-ai-agents)
+12. [Pre-installed Extensions](#12-pre-installed-extensions--extensiones-pre-instaladas)
 
 ---
 
@@ -565,6 +566,61 @@ Pi is the default assistant; alternatives are opt-in and launched manually from 
 > **gentle-ai scope note**: gentle-ai configures OpenCode only; Pi has gentle-pi; Freebuff, MiMo, and Qoder are standalone agents not configured by gentle-ai.
 
 Run `./agents.sh` to discover all installed agents and their launch commands.
+
+---
+
+## 12. Pre-installed Extensions / Extensiones pre-instaladas
+
+The image ships 16 code-server extensions pre-installed from the [Open VSX Registry](https://open-vsx.org/). They are available immediately on first launch — no manual installation required.
+
+La imagen incluye 16 extensiones de code-server pre-instaladas desde el [Open VSX Registry](https://open-vsx.org/). Estan disponibles inmediatamente al iniciar — no se requiere instalacion manual.
+
+### Jupyter & Data Science (3)
+
+| Extension | Purpose / Proposito |
+|---|---|
+| `ms-toolsai.jupyter` | Full Jupyter notebook interface and kernel execution |
+| `ms-toolsai.jupyter-renderers` | Interactive plot renderers (Plotly, Bokeh, MIME types) |
+| `ms-toolsai.vscode-jupyter-cell-tags` | Cell tagging for organizing notebook workflows |
+
+### DevOps & Environment (1)
+
+| Extension | Purpose / Proposito |
+|---|---|
+| `redhat.vscode-yaml` | YAML formatting and schema validation (docker-compose) |
+
+### API & Web Testing (3)
+
+| Extension | Purpose / Proposito |
+|---|---|
+| `humao.rest-client` | REST API testing inside `.http` files (no external tools) |
+| `bradlc.vscode-tailwindcss` | Tailwind CSS IntelliSense and autocomplete |
+| `christian-kohler.path-intellisense` | File path autocomplete in imports |
+
+### Productivity & Debugging (4)
+
+| Extension | Purpose / Proposito |
+|---|---|
+| `usernamehw.errorlens` | Inline error and warning highlighting on source lines |
+| `Gruntfuggly.todo-tree` | TODO/FIXME comment tree in sidebar |
+| `oderwat.indent-rainbow` | Colorized indentation levels (nesting visualization) |
+| `esbenp.prettier-vscode` | Code auto-formatting (JS/TS/HTML/CSS/JSON/Markdown) |
+
+### Documentation (2)
+
+| Extension | Purpose / Proposito |
+|---|---|
+| `yzhang.markdown-all-in-one` | Markdown shortcuts, TOC generator, formatting |
+| `bierner.markdown-mermaid` | Mermaid diagram rendering in Markdown preview |
+
+### Python Development (2)
+
+| Extension | Purpose / Proposito |
+|---|---|
+| `ms-python.python` | Python IntelliSense, debugging, test discovery |
+| `ms-python.vscode-pylance` | Fast Python language server (type checking) |
+
+> **Additional extensions / Extensiones adicionales**: Students can install more extensions through the code-server extensions panel (Ctrl+Shift+X) or via `code-server --install-extension <id>` in the terminal. / Los estudiantes pueden instalar mas extensiones desde el panel de extensiones (Ctrl+Shift+X) o con `code-server --install-extension <id>` en la terminal.
 
 ---
 

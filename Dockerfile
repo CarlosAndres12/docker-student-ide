@@ -339,6 +339,36 @@ RUN mkdir -p /config/data/User && \
 }\n' > /config/data/User/settings.json && \
     chown -R abc:abc /config/data/User
 
+# ── code-server Extensions (Open VSX Registry) ──────────────────────────────
+# Pre-install 14 essential extensions in 5 categories so students start with
+# a productive IDE on first launch. All IDs resolve against open-vsx.org
+# (code-server's default registry). Installed as root pointing to abc's home
+# (/config) so extensions land in /config/.local/share/code-server/extensions/.
+# chown at end ensures correct abc:abc ownership. The full binary path
+# /app/code-server/bin/code-server is used because /app/code-server/bin
+# is NOT on the default PATH.
+# Categories: Jupyter/Data Science (3), DevOps (1), API/Web (3),
+# Productivity (4), Documentation (2), Python Development (1).
+# NOTE: ms-python.vscode-pylance is proprietary (Microsoft marketplace only).
+# NOTE: ms-azuretools.vscode-docker incompatible with code-server 1.93.1.
+# NOTE: usernamehw.errorlens is the Open VSX ID (no hyphen before "lens").
+RUN export HOME=/config && \
+    /app/code-server/bin/code-server --install-extension ms-toolsai.jupyter && \
+    /app/code-server/bin/code-server --install-extension ms-toolsai.jupyter-renderers && \
+    /app/code-server/bin/code-server --install-extension ms-toolsai.vscode-jupyter-cell-tags && \
+    /app/code-server/bin/code-server --install-extension redhat.vscode-yaml && \
+    /app/code-server/bin/code-server --install-extension humao.rest-client && \
+    /app/code-server/bin/code-server --install-extension bradlc.vscode-tailwindcss && \
+    /app/code-server/bin/code-server --install-extension christian-kohler.path-intellisense && \
+    /app/code-server/bin/code-server --install-extension usernamehw.errorlens && \
+    /app/code-server/bin/code-server --install-extension Gruntfuggly.todo-tree && \
+    /app/code-server/bin/code-server --install-extension oderwat.indent-rainbow && \
+    /app/code-server/bin/code-server --install-extension esbenp.prettier-vscode && \
+    /app/code-server/bin/code-server --install-extension yzhang.markdown-all-in-one && \
+    /app/code-server/bin/code-server --install-extension bierner.markdown-mermaid && \
+    /app/code-server/bin/code-server --install-extension ms-python.python && \
+    chown -R abc:abc /config/.local/share/code-server/extensions
+
 # ── No Password Hardcoded ────────────────────────────────────────────────────
 # code-server's password is NEVER set in the Dockerfile.
 # It MUST be provided at runtime via the PASSWORD or HASHED_PASSWORD
