@@ -174,6 +174,20 @@ print('removed engram MCP entry (redundant with engram plugin; caused TUI hang)'
 RUN curl -fsSL https://mimo.xiaomi.com/install | bash && \
     /config/.mimocode/bin/mimo --version
 
+# ── Qoder CLI (terminal-native AI coding agent with agentic platform) ────────
+# Qoder CLI (qodercli) provides NEXT code completion, Inline Chat, Ask/Agent
+# Chat, and Quest Window for autonomous task delegation. Free tier requires
+# email/Google/GitHub signup (no credit card). Self-contained precompiled
+# binary. Installed via the official curl installer which auto-detects OS/arch,
+# verifies SHA256, and delegates to `qodercli install --force` for placement.
+# Binary lands at /config/.qoder/bin/qodercli/qodercli-<version> with an entry
+# point symlink at /config/.local/bin/qodercli. Both are copied to runtime.
+# NOT pinned to a version (installer fetches latest from Qoder's CDN manifest);
+# a follow-up can pin if reproducibility matters.
+# gentle-ai does NOT configure Qoder (standalone agent outside gentle ecosystem).
+RUN curl -fsSL https://qoder.com/install | bash && \
+    /config/.local/bin/qodercli --version
+
 # ── Python ML/DL Stack (CPU-only by default) ────────────────────────────────
 # PyTorch CPU wheels MUST be installed from the CPU-only wheel index to avoid
 # pulling multi-GB CUDA libraries.  The requirements.txt also lists torch and
@@ -277,6 +291,16 @@ RUN chown -R abc:abc /config/.config/opencode
 COPY --from=deps /config/.mimocode /config/.mimocode
 RUN chown -R abc:abc /config/.mimocode && \
     ln -sf /config/.mimocode/bin/mimo /usr/local/bin/mimo
+
+# ── Qoder CLI Binary ─────────────────────────────────────────────────────────
+# The Qoder installer placed the binary tree at /config/.qoder/ and a symlink
+# entry point at /config/.local/bin/qodercli. We COPY both trees and symlink
+# the entry point into /usr/local/bin so `qodercli` is on PATH without
+# shell-rc edits. Neither gentle-ai nor any startup script configures Qoder.
+COPY --from=deps /config/.qoder /config/.qoder
+COPY --from=deps /config/.local /config/.local
+RUN chown -R abc:abc /config/.qoder /config/.local && \
+    ln -sf /config/.local/bin/qodercli /usr/local/bin/qodercli
 
 # ── Pi Free-Tier Routing Configuration ───────────────────────────────────────
 # Lock Pi to free/zero-cost providers by default.

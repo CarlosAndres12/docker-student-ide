@@ -1,6 +1,6 @@
 # docker-student-ide — Entorno de Desarrollo para Estudiantes
 
-Un entorno de desarrollo completo en el navegador, listo con **Node.js 22**, **Python 3.11** (stack de ML/DL), **Jupyter**, **MLflow** y **5 asistentes de IA** (Pi, OpenCode, Freebuff, gentle-ai, MiMo) — todo con un solo comando.
+Un entorno de desarrollo completo en el navegador, listo con **Node.js 22**, **Python 3.11** (stack de ML/DL), **Jupyter**, **MLflow** y **6 asistentes de IA** (Pi, OpenCode, Freebuff, gentle-ai, MiMo, Qoder) — todo con un solo comando.
 
 Sin instalar nada en tu computadora. Solo necesitas Docker — y los scripts lo instalan si hace falta.
 
@@ -268,6 +268,9 @@ gentle-ai --version
 # MiMo (asistente de IA alternativo)
 mimo --version
 
+# Qoder (agente de IA alternativo)
+qodercli --version
+
 # GPU (solo si la habilitaste)
 nvidia-smi
 ```
@@ -346,10 +349,11 @@ Pi es el asistente por defecto; las alternativas son opcionales y se lanzan manu
 | **Freebuff** | `freebuff` | DeepSeek V4 Flash, Kimi K2.7, MiniMax M2.7 incluidos |
 | **gentle-ai** | `gentle-ai` | Mejora cualquier agente con memoria Engram, SDD y skills |
 | **MiMo** | `mimo` | MiMo (Xiaomi) — canal gratuito `mimo-auto` sin API key, contexto de 1M tokens, 128K de salida, soporta imágenes. Gratis por tiempo limitado. |
+| **Qoder** | `qodercli` | Plataforma agentica con NEXT (autocompletado), Inline Chat, Ask/Agent Chat y Quest Window para delegacion autonoma. Registro gratuito con email/Google/GitHub (sin tarjeta de credito). |
 
 > **OpenSpec** (Fission-AI) ya está instalado como el framework SDD del proyecto. No se reinstala como agente.
 >
-> **Nota sobre gentle-ai**: gentle-ai configura solo OpenCode; Pi ya tiene gentle-pi; MiMo y Freebuff son agentes independientes no configurados por gentle-ai.
+> **Nota sobre gentle-ai**: gentle-ai configura solo OpenCode; Pi ya tiene gentle-pi; Freebuff, MiMo, y Qoder son agentes independientes no configurados por gentle-ai.
 
 Ejecuta `./agents.sh` para ver todos los agentes instalados y sus comandos de lanzamiento.
 

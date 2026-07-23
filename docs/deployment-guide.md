@@ -56,6 +56,7 @@ stable releases and update these values across **all** files:
 | freebuff (npm global) | `freebuff@latest` | `Dockerfile` (deps stage) |
 | gentle-ai (Go binary) | `gentle-ai v2.1.10` | `Dockerfile` (deps stage) |
 | MiMo (precompiled binary) | Installed via `curl -fsSL https://mimo.xiaomi.com/install \| bash` (not pinned; installer fetches latest) | `Dockerfile` (deps stage) |
+| Qoder CLI (precompiled binary) | Installed via `curl -fsSL https://qoder.com/install \| bash` (not pinned; installer fetches latest from CDN manifest) | `Dockerfile` (deps stage) |
 
 > npm packages use `@latest`; resolved versions are recorded at build time in the Dockerfile.
 > 
@@ -295,6 +296,9 @@ gentle-ai --version
 # Expected: v2.1.10
 
 mimo --version
+# Expected: a version number (e.g. x.y.z)
+
+qodercli --version
 # Expected: a version number (e.g. x.y.z)
 ```
 
@@ -554,10 +558,11 @@ Pi is the default assistant; alternatives are opt-in and launched manually from 
 | **Freebuff** | `freebuff` | Zero-config, ad-supported free AI agent. Bundles free models: DeepSeek V4 Flash, Kimi K2.7, MiniMax M2.7. No API key needed. |
 | **gentle-ai** | `gentle-ai` | Ecosystem configurator (not an agent itself). Enhances any installed agent with persistent memory (Engram), Spec-Driven Development, curated skills, and MCP servers. |
 | **MiMo** | `mimo` | MiMo (Xiaomi, fork of OpenCode) — free `mimo-auto` channel, no API key, no login, 1M context window, 128K output, vision/image input. Free for a limited time. MIT-licensed. For headless use: `mimo --dangerously-skip-permissions` or `MIMOCODE_DANGEROUSLY_SKIP_PERMISSIONS=1` (opt-in, not set by default). |
+| **Qoder** | `qodercli` | Terminal-native agentic platform (NEXT code completion, Inline Chat, Ask/Agent, Quest Window for autonomous delegation). Free tier: email/Google/GitHub signup, no credit card. Qoder is a standalone agent not configured by gentle-ai. |
 
 > **OpenSpec** (Fission-AI / OpenSpec v1.6.0) is already installed as the SDD framework for this project. It is not re-installed as an agent.
 >
-> **gentle-ai scope note**: gentle-ai configures OpenCode only; Pi has gentle-pi; MiMo and Freebuff are standalone agents not configured by gentle-ai.
+> **gentle-ai scope note**: gentle-ai configures OpenCode only; Pi has gentle-pi; Freebuff, MiMo, and Qoder are standalone agents not configured by gentle-ai.
 
 Run `./agents.sh` to discover all installed agents and their launch commands.
 

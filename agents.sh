@@ -18,6 +18,7 @@ Pi|pi|pi|Asistente por defecto — capa gratuita via pi-free
 OpenCode|opencode|opencode|75+ proveedores via Models.dev, MCP, modelos gratuitos
 Freebuff|freebuff|freebuff|Zero-config, sin API key, modelos gratuitos (con ads)
 MiMo|mimo|mimo|Canal gratuito mimo-auto, sin API key, contexto 1M tokens (Xiaomi)
+Qoder|qodercli|qodercli|Registro email/Google/GitHub (sin tarjeta), QUEST/NEXT/Inline Chat
 gentle-ai|gentle-ai|gentle-ai|Configurador de ecosistema (memoria Engram, SDD, skills)
 "
 
