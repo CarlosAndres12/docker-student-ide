@@ -55,7 +55,7 @@ RUN pip install --no-cache-dir --upgrade pip
 # Node 22 LTS is required by @earendil-works/pi-coding-agent (>=22.19.0).
 # Download binary directly for exact version pinning (no nvm/nodenv overhead).
 ENV NODE_VERSION=22.23.1
-RUN curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz" \
+RUN curl --retry 3 --retry-delay 10 --connect-timeout 30 -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz" \
     -o /tmp/node.tar.xz && \
     tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1 && \
     rm /tmp/node.tar.xz && \
@@ -117,7 +117,7 @@ RUN ARCH="$(dpkg --print-architecture)" && \
       arm64)  ENGRAM_ARCH=linux_arm64  ;; \
       *) echo "Unsupported arch: $ARCH" >&2; exit 1 ;; \
     esac && \
-    curl -fsSL -o /tmp/engram.tar.gz \
+    curl --retry 3 --retry-delay 10 --connect-timeout 30 -fsSL -o /tmp/engram.tar.gz \
       "https://github.com/Gentleman-Programming/engram/releases/download/v${ENGRAM_VERSION}/engram_${ENGRAM_VERSION}_${ENGRAM_ARCH}.tar.gz" && \
     tar -xzf /tmp/engram.tar.gz -C /usr/local/bin engram && \
     chmod +x /usr/local/bin/engram && \
@@ -137,7 +137,7 @@ RUN ARCH="$(dpkg --print-architecture)" && \
       arm64)  GENTLE_ARCH=linux_arm64  ;; \
       *) echo "Unsupported arch: $ARCH" >&2; exit 1 ;; \
     esac && \
-    curl -fsSL -o /tmp/gentle-ai.tar.gz \
+    curl --retry 3 --retry-delay 10 --connect-timeout 30 -fsSL -o /tmp/gentle-ai.tar.gz \
       "https://github.com/Gentleman-Programming/gentle-ai/releases/download/v${GENTLE_AI_VERSION}/gentle-ai_${GENTLE_AI_VERSION}_${GENTLE_ARCH}.tar.gz" && \
     tar -xzf /tmp/gentle-ai.tar.gz -C /usr/local/bin gentle-ai && \
     chmod +x /usr/local/bin/gentle-ai && \
@@ -163,15 +163,18 @@ d.get('mcp',{}).pop('engram',None) and json.dump(d, open(p,'w'), indent=2); \
 print('removed engram MCP entry (redundant with engram plugin; caused TUI hang)')"
 
 # ── MiMo (Xiaomi, fork of OpenCode) ────────────────────────────────────────
+ARG MIMO_VERSION=0.1.8
 # MiMo is a terminal-native AI coding agent with a free `mimo-auto` channel
 # (1M context, 128K output, vision input, no API key, no login). Self-contained
 # precompiled binary (Bun-compiled, no runtime dependency). MIT-licensed.
-# Installed via the official Xiaomi installer, which auto-detects OS/arch and
-# places the binary at ~/.mimocode/bin/mimo. HOME=/config (set above) → binary
-# lands at /config/.mimocode/bin/mimo, copied to runtime below.
-# NOT pinned to a version (installer always fetches latest); follow-up can pin.
+# Installed via the official Xiaomi installer with VERSION env var for pinning.
+# HOME=/config (set above) → binary lands at /config/.mimocode/bin/mimo,
+# copied to runtime below. The installer auto-detects OS/arch (glibc, AVX2,
+# musl) and extracts from Xiaomi's FDS CDN. curl --retry handles transient
+# network drops that plague large binary downloads on unstable connections.
+# Pinned via ARG MIMO_VERSION (default 0.1.8); bump in one place.
 # gentle-ai does NOT configure MiMo (standalone fork, outside gentle ecosystem).
-RUN curl -fsSL https://mimo.xiaomi.com/install | bash && \
+RUN VERSION="$MIMO_VERSION" curl --retry 3 --retry-delay 10 --connect-timeout 30 -fsSL https://mimo.xiaomi.com/install | bash && \
     /config/.mimocode/bin/mimo --version
 
 # ── Qoder CLI (terminal-native AI coding agent with agentic platform) ────────
@@ -185,7 +188,7 @@ RUN curl -fsSL https://mimo.xiaomi.com/install | bash && \
 # NOT pinned to a version (installer fetches latest from Qoder's CDN manifest);
 # a follow-up can pin if reproducibility matters.
 # gentle-ai does NOT configure Qoder (standalone agent outside gentle ecosystem).
-RUN curl -fsSL https://qoder.com/install | bash && \
+RUN curl --retry 3 --retry-delay 10 --connect-timeout 30 -fsSL https://qoder.com/install | bash && \
     /config/.local/bin/qodercli --version
 
 # ── Python ML/DL Stack (CPU-only by default) ────────────────────────────────
