@@ -11,6 +11,9 @@ openspec/
 # or OpenCode's snapshot feature tracks them as git objects.
 # (Previous harness: test/windows-vm/* — removed 2026-08-12)
 
+# Pester results mounted locally (the Docker runner keeps them in a volume)
+tests/windows/results/
+
 # Student workspace — contains student projects and generated content
 # We ignore everything inside by default but allow tracking a starter
 # package.json and .gitkeep via ! exceptions.

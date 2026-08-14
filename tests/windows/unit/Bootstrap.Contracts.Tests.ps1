@@ -18,7 +18,7 @@ Describe "Windows bootstrap contracts" {
     }
 
     It "forwards installer arguments to the child script" {
-        $installScript | Should -Match "Invoke-ChildPowerShell -ScriptPath \(Join-Path \$PWD 'start\.ps1'\) -ArgsList \$ArgsList"
+        $installScript | Should -Match 'Invoke-ChildPowerShell -ScriptPath \(Join-Path \$PWD ''start\.ps1''\) -ArgsList \$ArgsList'
     }
 
     It "has a documented noninteractive seam in both PowerShell scripts" {

@@ -13,7 +13,8 @@ function Invoke-BootstrapScenario {
     }
 
     try {
-        $output = & pwsh.exe -NoProfile -NonInteractive -File $ScriptPath @Arguments 2>&1
+        $launcher = if ($IsWindows) { "pwsh.exe" } else { "pwsh" }
+        $output = & $launcher -NoProfile -NonInteractive -File $ScriptPath @Arguments 2>&1
         [pscustomobject]@{
             ExitCode = $LASTEXITCODE
             Output = @($output)

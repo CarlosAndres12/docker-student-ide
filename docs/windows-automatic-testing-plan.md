@@ -67,7 +67,8 @@ infrastructure failure, not as a product failure.
 | Layer | Fixture | Responsibilities | Cadence |
 |---|---|---|---|
 | Static contracts | Linux host | Check PowerShell and shell file presence, shell syntax, required command shapes, and `docker compose config`. Do not claim this proves PowerShell execution. | Every change |
-| PowerShell unit tests | PowerShell with Pester 5, mocked external commands | Exercise branching, exit codes, argument forwarding, `.env` mutation, bounded waits, and user-facing diagnostics without installing software or changing a real machine. | Every change |
+| PowerShell unit tests (container) | `mcr.microsoft.com/powershell` with Pester 5 | Run the deterministic unit suite under pwsh on Linux. Proves the PowerShell code parses and the unit seams behave. Does not prove native Windows behavior. | Every change touching bootstrap scripts |
+| PowerShell unit tests (native) | PowerShell with Pester 5, mocked external commands | Exercise branching, exit codes, argument forwarding, `.env` mutation, bounded waits, and user-facing diagnostics without installing software or changing a real machine. | Every change |
 | Native bootstrap integration | Disposable Windows 11 with WSL2 and Docker Desktop | Prove the real `install.ps1` and `start.ps1` behavior across execution policy, WSL, Docker Desktop, Compose, and reboot/state transitions. | Pull request or protected-branch gate once stable |
 | External VM runtime proof | `/home/carlos/windows-vm` through SSH | Prove guest reachability, staging, process execution, snapshot recovery, and selected Compose/runtime smoke checks. | Manual first, then scheduled/nightly |
 | Shell parity | Linux and, where available, macOS | Keep `install.sh` and `start.sh` behavior covered for shared contracts such as Compose invocation, argument forwarding, and `.env` updates. | Every change touching shell wrappers |
@@ -188,6 +189,24 @@ Docker Desktop, or packages.
 
 Native and external-VM scenarios are represented by pending Pester tests until
 their fixtures and adapters exist. Pending tests are not coverage claims.
+
+## Running the Suite
+
+The deterministic unit suite runs inside a PowerShell container so it can be
+executed on any Docker-capable host, including Linux:
+
+```bash
+scripts/windows-testing/run-pester.sh
+```
+
+The runner builds `tests/windows/Dockerfile` (pwsh LTS with Pester 5),
+mounts the repository read-only, and writes the JUnit result to a named volume
+outside Git. Set `PESTER_RESULTS_PATH` to override the result location.
+
+Evidence produced by the container proves that the PowerShell code parses and
+the unit seams behave. It does **not** prove native Windows behavior: winget,
+WSL, Docker Desktop, execution policy, and reboot transitions still require a
+native Windows fixture.
 
 ## Snapshot and Restore Lifecycle
 
