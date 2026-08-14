@@ -11,42 +11,42 @@ CI remain future phases.
 |---|---|---|
 | Repository | `scripts/install.ps1`, `start.ps1`, `scripts/install.sh`, and `start.sh` are the bootstrap entry points. | Tests must cover both the PowerShell path and shell-wrapper parity where behavior overlaps. |
 | Windows tests | A tracked static-contract Pester suite exists; there is no native Windows harness or Windows CI runner. | Contract tests are implemented; mocked side-effect tests, native integration, and CI remain future work. |
-| External fixture | A live `dockur/windows` VM exists at `/home/carlos/windows-vm`. It runs Windows 11 with 8 GB RAM, 4 vCPU, and a persistent `data.img`. | Use it for controlled runtime proof, not as an implicit repository dependency. |
-| VM control plane | The host `/shared` bind mount appears as `Z:` in Windows. OpenSSH is installed and verified: `sshd` is Running with Automatic startup, the `OpenSSH-Server-In-TCP` firewall rule exists, and the guest listens on `:::22`. | The host can stage files and run noninteractive guest commands over SSH. |
-| SSH proof | `ssh -p 2222 Docker@127.0.0.1 whoami` returns the Windows identity. | SSH orchestration is viable, but credentials and the SSH key must stay outside the repository. |
+| External fixture | A live `dockur/windows` VM exists at `/home/carlos/windows-vm`. It runs Windows 11 (10.0.26200) with 8 GB RAM, 4 vCPU, and a disposable qcow2 overlay over an immutable base image. | Use it for controlled runtime proof, not as an implicit repository dependency. |
+| VM control plane | The host `/shared` bind mount appears as `Z:` in the interactive guest session. OpenSSH is installed and verified; a dedicated runner key authenticates over `127.0.0.1:2222`. | The host can stage files and run noninteractive guest commands over SSH; SSH sessions map `Z:` per session via `net use`. |
+| Real-Windows run | The Pester suite runs on the VM under Windows PowerShell 5.1 (`scripts/windows-testing/vm-run.sh`): 12 passed, 0 failed, 8 pending. | This proves the bootstrap scripts parse and the unit seams behave on real Windows. It does not prove winget, WSL, or Docker Desktop behavior. |
 
 ### Current implementation boundary
 
 The current uncommitted change set under review includes the Windows bootstrap
 scripts, their shell counterparts, Docker image cleanup, deployment
 documentation, and this testing plan. The tracked testing implementation lives
-under `tests/windows/`; host-side VM adapters will live under
-`scripts/windows-testing/` when Phase 2 starts. No test source is authoritative
+under `tests/windows/`; host-side VM adapters live under
+`scripts/windows-testing/`. No test source is authoritative
 inside `/home/carlos/windows-vm`.
 
 The following evidence is currently valid:
 
 - Linux static checks: shell syntax and `docker compose config`.
-- External VM checks: SSH transport, guest identity, OpenSSH service state, and
-  shared-directory staging.
-- Pester contract tests: source-level bootstrap invariants, when executed on a
-  Windows host with Pester 5.
+- Container Pester run: the PowerShell code parses and the unit seams behave under pwsh on Linux.
+- Real-Windows VM run: the same suite executes under Windows PowerShell 5.1 on the Windows 11 fixture with key-based SSH orchestration.
+- External VM checks: SSH transport, guest identity, OpenSSH service state, shared-directory staging, nested VMX exposure, and snapshot/restore lifecycle.
 
 The following evidence is not yet available:
 
-- PowerShell execution on the host used for development.
+- PowerShell execution on the Linux development host (still unavailable; the VM runner is the execution path).
 - Native Windows + WSL2 + Docker Desktop integration.
-- Snapshot/restore orchestration implemented in the repository.
 - A Windows CI runner or scheduled external-VM job.
 
 The external VM snapshot, credentials, image, and result artifacts remain
 outside Git. The VM must not be treated as a substitute for native Windows
 coverage.
 
-The VM is useful for runtime proof, guest command orchestration, and diagnostics.
-It does **not** replace coverage on native Windows with WSL2 and Docker Desktop.
-Those layers exercise the platform dependencies that the current `dockur/windows`
-fixture does not prove by itself and must be covered separately.
+The VM proves real Windows PowerShell execution and controlled guest
+orchestration. It does **not** yet replace coverage on native Windows with WSL2
+and Docker Desktop. Those layers exercise the platform dependencies that the
+current `dockur/windows` fixture does not prove by itself and must be covered
+separately (the fixture exposes VMX, so they are reachable, but they are not
+covered yet).
 
 ## Target Architecture
 
@@ -204,46 +204,63 @@ mounts the repository read-only, and writes the JUnit result to a named volume
 outside Git. Set `PESTER_RESULTS_PATH` to override the result location.
 
 Evidence produced by the container proves that the PowerShell code parses and
-the unit seams behave. It does **not** prove native Windows behavior: winget,
-WSL, Docker Desktop, execution policy, and reboot transitions still require a
-native Windows fixture.
+the unit seams behave. It does **not** prove native Windows behavior.
+
+The same suite runs on real Windows through the VM fixture:
+
+```bash
+scripts/windows-testing/vm-run.sh
+```
+
+This proves that the scripts parse and the unit seams behave under Windows
+PowerShell 5.1 on Windows 11. It does **not** yet prove winget, WSL, Docker
+Desktop, or reboot transitions; those still require the prepared-runtime
+baseline (WSL2 and Docker Desktop, reachable through the fixture's VMX
+exposure).
 
 ## Snapshot and Restore Lifecycle
 
-The fixture must be treated as disposable state. At minimum, define two
-versioned baselines outside Git:
+The fixture is disposable state. The snapshot mechanism is implemented with an
+immutable qcow2 base plus per-run disposable overlays, because the host
+filesystem has no copy-on-write reflink support:
+
+- The **base** (`/home/carlos/windows-snapshots/base/base.qcow2`, read-only)
+  is a clean Windows 11 image with the SSH control plane, the runner key, and
+  Pester 5.7.1 installed. It is never booted directly.
+- Every run creates a **disposable overlay** (`data.qcow2` in the VM storage
+  directory) whose backing file is the base. Only the run's delta is written,
+  so disk usage per run is bounded by the guest changes, not a full copy.
+- The protected post-OpenSSH master snapshot
+  (`/home/carlos/windows-snapshots/20260813T071426Z-with-openssh`) remains the
+  recovery point for the base chain and must never be modified or deleted.
 
 | Baseline | Contents | Intended tests |
 |---|---|---|
-| `clean-bootstrap` | Windows booted, SSH control plane configured, no test checkout or test workspace, and no untracked SUT state. | Install, execution-policy, missing-prerequisite, and first-bootstrap scenarios. |
+| `clean-bootstrap` | Implemented: the base image (Windows booted, SSH control plane, runner key, Pester 5.7.1, no test checkout). | Install, execution-policy, missing-prerequisite, and first-bootstrap scenarios. |
 | `prepared-runtime` | WSL2 and Docker Desktop installed, daemon healthy, SSH available, and no test-owned Compose state. | `start.ps1`, Compose, runtime, and persistence scenarios. |
 
-For each run:
+For each run (`scripts/windows-testing/vm-run.sh`):
 
-1. Record the baseline ID, test revision, guest identity, and run ID.
-2. Stop the guest and all test-owned workloads before creating or restoring an image.
-3. Restore the selected `data.img` baseline before the scenario; never reuse a mutated guest silently.
-4. Start the VM and wait for the SSH port and guest health probe, not just the container process.
-5. Stage the test revision through the `/shared` bind mount and invoke the guest runner from `Z:`.
-6. Collect results and diagnostics, then stop the VM and restore the baseline even after failure.
-7. Verify that the restored image is usable before marking infrastructure recovery successful.
+1. Record the run ID, test revision, guest identity, and base identity.
+2. Refuse to start if the VM container is still running; create the overlay only while the guest is fully stopped.
+3. Boot from the overlay, then wait for the SSH port and guest health probe, not just the container process.
+4. Stage the pinned revision through the `/shared` bind mount; the runner maps `Z:` inside the same SSH session (`net use Z: \\host.lan\Data`) and invokes the suite with `-NoProfile -NonInteractive -ExecutionPolicy Bypass`.
+5. Collect results into the external results area (`/home/carlos/windows-vm/results/<run-id>/`).
+6. Stop the VM gracefully and delete the overlay even after failure (keep it only with `--keep` for inspection).
+7. Verify base integrity with the recorded SHA-256 before deleting any consolidated raw image or snapshot.
 
-The exact snapshot mechanism is an implementation task. It may be a storage
-snapshot or a sparse, verified image copy. The invariant is that `data.img` is
-never replaced while the VM is running and that snapshots remain outside the
-repository. Illustrative host-side command shapes are:
+Host-side command shapes:
 
 ```bash
-docker compose -f /home/carlos/windows-vm/docker-compose.yml down
-# Create or restore a versioned snapshot while the guest is fully stopped.
-cp --reflink=auto /home/carlos/windows-vm/snapshots/<baseline>/data.img \
-  /home/carlos/windows-vm/data.img
-docker compose -f /home/carlos/windows-vm/docker-compose.yml up -d
+scripts/windows-testing/snapshot.sh create   # fresh disposable overlay
+scripts/windows-testing/snapshot.sh list     # base + overlay state
+scripts/windows-testing/vm-run.sh            # full run lifecycle
+scripts/windows-testing/snapshot.sh delete   # discard the overlay
 ```
 
-These are command shapes for the future adapter, not commands to run as part
-of this document change. The adapter must validate paths, VM state, image size,
-and restore completion before it allows tests to continue.
+The adapter validates paths and VM state before it allows tests to continue.
+Never start the VM storage directory without an overlay: dockurr would create
+a new blank disk and reinstall Windows.
 
 ## SSH Orchestration
 
@@ -349,9 +366,10 @@ installing software or mutating a real Windows machine.
 
 ### Phase 2: VM control and recovery
 
-- [ ] Implement snapshot create/list/restore around the external `data.img`.
-- [ ] Implement SSH preflight, staging through `Z:`, remote execution, timeout handling, and cleanup.
-- [ ] Create and verify `clean-bootstrap` and `prepared-runtime` baselines.
+- [x] Implement snapshot create/list/restore around the external qcow2 base (`scripts/windows-testing/snapshot.sh`).
+- [x] Implement SSH preflight, staging through `Z:`, remote execution, timeout handling, and cleanup (`scripts/windows-testing/vm-run.sh`).
+- [x] Create and verify the `clean-bootstrap` baseline (immutable base with SSH control plane and Pester 5.7.1).
+- [ ] Create and verify the `prepared-runtime` baseline (WSL2 + Docker Desktop).
 
 **Exit condition:** a deliberately failing scenario still restores a usable
 baseline and produces classified diagnostics.
