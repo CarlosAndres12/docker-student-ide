@@ -1,6 +1,6 @@
 # docker-student-ide — Entorno de Desarrollo para Estudiantes
 
-Un entorno de desarrollo completo en el navegador, listo con **Node.js 22**, **Python 3.11** (stack de ML/DL), **Jupyter**, **MLflow** y **6 asistentes de IA** (Pi, OpenCode, Freebuff, gentle-ai, MiMo, Qoder) — todo con un solo comando.
+Un entorno de desarrollo completo en el navegador, listo con **Node.js 22**, **Python 3.11** (stack de ML/DL), **Jupyter**, **MLflow** y **5 asistentes de IA** (Pi, OpenCode, Freebuff, gentle-ai, Qoder) — todo con un solo comando.
 
 Sin instalar nada en tu computadora. Solo necesitas Docker — y los scripts lo instalan si hace falta.
 
@@ -265,9 +265,6 @@ freebuff --version
 # gentle-ai (ecosistema potenciador de agentes)
 gentle-ai --version
 
-# MiMo (asistente de IA alternativo)
-mimo --version
-
 # Qoder (agente de IA alternativo)
 qodercli --version
 
@@ -348,12 +345,11 @@ Pi es el asistente por defecto; las alternativas son opcionales y se lanzan manu
 | **OpenCode** | `opencode` | 75+ proveedores vía Models.dev, MCP incluido |
 | **Freebuff** | `freebuff` | DeepSeek V4 Flash, Kimi K2.7, MiniMax M2.7 incluidos |
 | **gentle-ai** | `gentle-ai` | Mejora cualquier agente con memoria Engram, SDD y skills |
-| **MiMo** | `mimo` | MiMo (Xiaomi) — canal gratuito `mimo-auto` sin API key, contexto de 1M tokens, 128K de salida, soporta imágenes. Gratis por tiempo limitado. |
 | **Qoder** | `qodercli` | Plataforma agentica con NEXT (autocompletado), Inline Chat, Ask/Agent Chat y Quest Window para delegacion autonoma. Registro gratuito con email/Google/GitHub (sin tarjeta de credito). |
 
 > **OpenSpec** (Fission-AI) ya está instalado como el framework SDD del proyecto. No se reinstala como agente.
 >
-> **Nota sobre gentle-ai**: gentle-ai configura solo OpenCode; Pi ya tiene gentle-pi; Freebuff, MiMo, y Qoder son agentes independientes no configurados por gentle-ai.
+> **Nota sobre gentle-ai**: gentle-ai configura solo OpenCode; Pi ya tiene gentle-pi; Freebuff y Qoder son agentes independientes no configurados por gentle-ai.
 
 Ejecuta `./agents.sh` para ver todos los agentes instalados y sus comandos de lanzamiento.
 
@@ -396,17 +392,6 @@ Kimi K2.7 y MiniMax M2.7.
 
 ```bash
 freebuff
-```
-
-### MiMo — canal gratuito `mimo-auto`
-
-MiMo ofrece un canal gratuito con 1M tokens de contexto, 128K tokens de salida
-y soporte para imágenes (visión). Sin API key ni registro.
-
-> ⚠️ El canal gratuito de MiMo está disponible por tiempo limitado.
-
-```bash
-mimo
 ```
 
 ---
@@ -502,6 +487,67 @@ Agrégalo a `~/.bashrc` (dentro del contenedor) si el problema persiste.
 Los tokens OAuth que no se guardan en `student_workspace/` se pierden al recrear el
 contenedor. Revisa la "Opción B" de la sección de Pi para hacer el flujo OAuth una
 sola vez y persistir el token en el workspace.
+
+### Arranque en Windows (Windows bootstrap)
+
+**1. "running scripts is disabled" / UnauthorizedAccess**
+
+**Síntoma**: `start.ps1` no se ejecuta por la política de ejecución de PowerShell.
+
+**Causa**: la política (Execution Policy) bloquea scripts sin firmar.
+
+**Solución**: permite scripts locales (no afecta scripts remotos):
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+```
+
+`install.ps1` ya ejecuta `start.ps1` con `-ExecutionPolicy Bypass` en un proceso
+hijo; si aún así ves el error, aplica el comando anterior. Un reinicio de la
+terminal (restart terminal) ayuda si el cambio no toma efecto.
+
+**2. "docker: command not found" / docker no se encuentra**
+
+**Síntoma**: el script no encuentra el comando `docker`.
+
+**Causa**: Docker Desktop se instaló en esta sesión y el PATH de la terminal aún
+no se actualizó.
+
+**Solución**: reinicia la terminal (restart terminal) o vuelve a ejecutar el
+script: ambos scripts refrescan el PATH desde el registro (Machine + User) al
+iniciar. Si el problema persiste, reinstala Docker Desktop.
+
+**3. El script se queda en el bucle "Docker aun no responde"**
+
+**Síntoma**: el script espera al daemon y Docker nunca responde.
+
+**Causa**: hay que distinguir entre CLI ausente (instala/reinstala Docker Desktop
+y reinicia la terminal) y daemon apagado (Docker Desktop debe estar abierto).
+
+**Solución**: confirma que Docker Desktop esté abierto (icono en la bandeja del
+sistema). El script espera hasta 5 minutos (5-min wait, 60 × 5 s) en todos los
+casos antes de fallar. Si superó la espera, abre Docker Desktop manualmente y
+ejecuta el script de nuevo.
+
+**4. La instalación de WSL pide un usuario Unix**
+
+**Síntoma**: al instalar WSL aparece un aviso interactivo para crear un usuario
+Unix predeterminado (WSL user prompt: nombre de usuario + contraseña).
+
+**Causa**: es parte normal de `wsl --install` en instalaciones nuevas.
+
+**Solución**: completa el aviso con un nombre de usuario y una contraseña. El
+script te avisa antes de abrirlo; sin ese usuario WSL no funciona.
+
+**5. "git is not installed" / falta Git**
+
+**Síntoma**: `install.ps1` no encuentra `git`.
+
+**Causa**: Git no está instalado o no está en el PATH.
+
+**Solución**: el script intenta `winget install -e --id Git.Git` automáticamente;
+si falla, instala Git manualmente desde https://git-scm.com/download/win y vuelve
+a ejecutar.
 
 ---
 

@@ -28,6 +28,10 @@ function Write-Message {
 }
 
 # -- Helper: pause before exit (prevents terminal from closing on error) ----------
+function Test-IsNonInteractive {
+    return $env:DOCKER_STUDENT_IDE_NONINTERACTIVE -eq "1"
+}
+
 function Exit-WithPause {
     param([int]$Code = 0)
     if ($Code -ne 0) {
@@ -36,9 +40,75 @@ function Exit-WithPause {
         Write-Host "   An error occurred (code $Code). Check the message above."
     }
     Write-Host ""
-    Read-Host "Presiona Enter para salir / Press Enter to exit"
+    if (-not (Test-IsNonInteractive)) {
+        Read-Host "Presiona Enter para salir / Press Enter to exit"
+    }
     exit $Code
 }
+
+function Wait-DockerDaemon {
+    param(
+        [int]$MaxRetries = 60,
+        [int]$SleepSeconds = 5
+    )
+
+    for ($retryCount = 0; $retryCount -lt $MaxRetries; $retryCount++) {
+        $LASTEXITCODE = 1
+        $null = docker info 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            return $true
+        }
+        if ((($retryCount + 1) % 6) -eq 0) {
+            Write-Host "   [...] $(($retryCount + 1) * $SleepSeconds) s: Docker aun no responde. Esperando..."
+            Write-Host "      $(($retryCount + 1) * $SleepSeconds) s: Docker not responding yet. Waiting..."
+        }
+        if ($SleepSeconds -gt 0) {
+            Start-Sleep -Seconds $SleepSeconds
+        }
+    }
+
+    return $false
+}
+
+function Update-EnvVar {
+    param([string]$VarName, [string]$Value, [string]$FilePath)
+    $line = "${VarName}=${Value}"
+
+    if (Test-Path $FilePath) {
+        $content = Get-Content -Path $FilePath -Raw
+        if ($content -match "(?m)^${VarName}=.*") {
+            $content = $content -replace "(?m)^${VarName}=.*", $line
+            Set-Content -Path $FilePath -Value $content -NoNewline
+        } else {
+            Add-Content -Path $FilePath -Value $line
+        }
+    } else {
+        $examplePath = Join-Path -Path $PWD -ChildPath ".env.example"
+        if (Test-Path $examplePath) {
+            Copy-Item -Path $examplePath -Destination $FilePath
+            $content = Get-Content -Path $FilePath -Raw
+            if ($content -match "(?m)^${VarName}=.*") {
+                $content = $content -replace "(?m)^${VarName}=.*", $line
+                Set-Content -Path $FilePath -Value $content -NoNewline
+            } else {
+                Add-Content -Path $FilePath -Value $line
+            }
+        } else {
+            Set-Content -Path $FilePath -Value $line
+        }
+    }
+}
+
+function Invoke-StartBootstrap {
+    param(
+        [int]$MaxRetries = 60,
+        [int]$SleepSeconds = 5
+    )
+
+# -- Refresh PATH from registry (Machine + User) ------------------------------
+# Picks up Docker Desktop / WSL installed this session without requiring a
+# terminal restart. Machine-first mirrors the Windows environment order.
+$env:Path = @([Environment]::GetEnvironmentVariable('Path','Machine'), [Environment]::GetEnvironmentVariable('Path','User')) -join ';'
 
 # -- Section 0: Check WSL (Windows only -- Docker Desktop requires WSL 2) --------
 $wslCmd = Get-Command "wsl" -ErrorAction SilentlyContinue
@@ -47,12 +117,20 @@ if ($wslCmd) {
     if ($LASTEXITCODE -ne 0) {
         Write-Message "WSL no esta instalado o no funciona. Docker Desktop lo necesita en Windows." "WSL is not installed or not functional. Docker Desktop requires it on Windows."
 
-        $respuesta = Read-Host "   ?Quieres instalarlo ahora? / Install it now? (y/N)"
+        $respuesta = if (Test-IsNonInteractive) {
+            "n"
+        } else {
+            Read-Host "   ?Quieres instalarlo ahora? / Install it now? (y/N)"
+        }
 
         if ($respuesta -eq "y" -or $respuesta -eq "Y") {
             Write-Message "Instalando WSL (requiere permisos de administrador)..." "Installing WSL (requires admin privileges)..."
             Write-Host "   Se abrira una ventana de UAC. Aceptala para continuar."
             Write-Host "   A UAC prompt will appear. Accept it to continue."
+            Write-Host ""
+            Write-Host "[!]  IMPORTANTE: el instalador de WSL mostrara un aviso interactivo para crear un usuario Unix predeterminado (nombre de usuario y contrasena). DEBES completarlo (Escribe el usuario y la contrasena) para que WSL funcione."
+            Write-Host "   IMPORTANT: the WSL installer will show an interactive prompt to create a default Unix user (username and password). You MUST complete it (type the user and password) for WSL to work."
+            Write-Host ""
 
             try {
                 Start-Process -FilePath "wsl" -ArgumentList "--install" -Verb RunAs -Wait
@@ -161,11 +239,24 @@ if ($dockerPath) {
         Exit-WithPause -Code 1
     }
 
+    # winget/choco installs set the Machine PATH -- refresh the session so the
+    # Docker CLI just installed becomes visible without a terminal restart.
+    $env:Path = @([Environment]::GetEnvironmentVariable('Path','Machine'), [Environment]::GetEnvironmentVariable('Path','User')) -join ';'
+
+    # Guard: a missing CLI is a fix-it problem, not a wait problem. If the CLI
+    # is still absent after install + refresh, stop instead of polling forever.
+    if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
+        Write-Host ""
+        Write-Message "Docker CLI no encontrado. Reinstala Docker Desktop o reinicia la terminal y ejecuta este script de nuevo." "Docker CLI not found. Reinstall Docker Desktop or restart your terminal and run this script again."
+        Write-Host "   https://docs.docker.com/desktop/install/windows-install/"
+        Exit-WithPause -Code 1
+    }
+
     Write-Host ""
     Write-Host "[!]  Una vez que Docker Desktop este abierto y corriendo, ejecuta este script de nuevo."
     Write-Host "   Once Docker Desktop is open and running, run this script again."
-    Write-Host "   (O simplemente continua -- el script esperara hasta 2 minutos a que Docker arranque.)"
-    Write-Host "   (Or just continue -- the script will wait up to 2 minutes for Docker to start.)"
+    Write-Host "   (O simplemente continua -- el script esperara hasta 5 minutos a que Docker arranque.)"
+    Write-Host "   (Or just continue -- the script will wait up to 5 minutes for Docker to start.)"
     Write-Host ""
 }
 
@@ -182,6 +273,7 @@ if (Test-Path $dockerDesktopPath) {
 }
 
 # Quick check: is Docker already running?
+$LASTEXITCODE = 1   # reset stale exit code so a missed CLI cannot short-circuit
 $null = docker info 2>&1
 if ($LASTEXITCODE -eq 0) {
     Write-Message "[OK] Docker ya esta corriendo." "Docker already running."
@@ -191,32 +283,14 @@ if ($LASTEXITCODE -eq 0) {
         Start-Process -FilePath $ddBin
         Write-Host "   Docker Desktop se esta abriendo. Esperando a que termine de iniciar..."
         Write-Host "   Docker Desktop is starting up. Waiting for it to be ready..."
-        # Docker Desktop takes longer on first cold start; give it 5 minutes
-        $maxRetries = 60   # 60 * 5 = 300 seconds
     } else {
         Write-Host "[i] Docker CLI encontrado pero el daemon no responde."
         Write-Host "   Docker CLI found but daemon is not responding."
         Write-Host "   Abre Docker Desktop desde el menu Inicio / Open Docker Desktop from Start Menu."
-        $maxRetries = 24   # 24 * 5 = 120 seconds
     }
 
     Write-Message "Esperando a que el servicio Docker este listo..." "Waiting for the Docker daemon to be ready..."
-    $retryCount = 0
-    $dockerReady = $false
-
-    while ($retryCount -lt $maxRetries) {
-        $null = docker info 2>&1
-        if ($LASTEXITCODE -eq 0) {
-            $dockerReady = $true
-            break
-        }
-        $retryCount++
-        if ($retryCount -eq 1) {
-            Write-Host "   [...] Docker aun no responde. Esperando..."
-            Write-Host "      Docker not responding yet. Waiting..."
-        }
-        Start-Sleep -Seconds 5
-    }
+    $dockerReady = Wait-DockerDaemon -MaxRetries $MaxRetries -SleepSeconds $SleepSeconds
 
     if (-not $dockerReady) {
         Write-Message "Docker no arranco despues de la espera." "Docker did not start after waiting."
@@ -233,6 +307,26 @@ if ($LASTEXITCODE -eq 0) {
 
 Write-Message "[OK] Docker esta funcionando." "Docker is running."
 
+# -- Section 2.5: Enable Docker Desktop autostart (best-effort) ---------------
+# Persist "autoStart": true in Docker Desktop settings so the daemon is ready
+# on future sign-ins. Best-effort: a failed write only warns and never blocks.
+try {
+    $settingsPath = Join-Path -Path $env:APPDATA -ChildPath "Docker\settings-store.json"
+    if (Test-Path $settingsPath) {
+        $settings = Get-Content -Path $settingsPath -Raw | ConvertFrom-Json
+        $settings.autoStart = $true
+        $settings | ConvertTo-Json -Depth 10 | Set-Content -Path $settingsPath -Encoding UTF8
+    } else {
+        Set-Content -Path $settingsPath -Value '{"autoStart": true}' -Encoding UTF8
+    }
+    Write-Message "Autostart de Docker Desktop habilitado (se iniciara al iniciar sesion)." "Docker Desktop autostart enabled (it will start when you sign in)."
+} catch {
+    Write-Host ""
+    Write-Message "No se pudo activar el autostart de Docker Desktop." "Could not enable Docker Desktop autostart."
+    Write-Host "   Activalo manualmente: Docker Desktop -> Settings -> General -> 'Start Docker Desktop when you sign in'."
+    Write-Host "   Enable it manually: Docker Desktop -> Settings -> General -> 'Start Docker Desktop when you sign in'."
+}
+
 # -- Section 3: Check docker compose (v2) -------------------------------------
 $composeResult = docker compose version 2>&1
 if ($LASTEXITCODE -ne 0) {
@@ -245,40 +339,6 @@ Write-Message "[OK] docker compose (v2) disponible." "docker compose (v2) availa
 
 # -- Section 4: Set PUID / PGID in .env (Windows -> 1000:1000) ----------------
 $envPath = Join-Path -Path $PWD -ChildPath ".env"
-
-# Helper: ensure a variable is set in .env
-function Update-EnvVar {
-    param([string]$VarName, [string]$Value, [string]$FilePath)
-    $pattern = "^${VarName}=.*"
-    $line = "${VarName}=${Value}"
-
-    if (Test-Path $FilePath) {
-        $content = Get-Content -Path $FilePath -Raw
-        if ($content -match "(?m)^${VarName}=.*") {
-            $content = $content -replace "(?m)^${VarName}=.*", $line
-            Set-Content -Path $FilePath -Value $content -NoNewline
-        } else {
-            Add-Content -Path $FilePath -Value $line
-        }
-    } else {
-        # Create .env from .env.example if it exists
-        $examplePath = Join-Path -Path $PWD -ChildPath ".env.example"
-        if (Test-Path $examplePath) {
-            Copy-Item -Path $examplePath -Destination $FilePath
-            # Now replace the value
-            $content = Get-Content -Path $FilePath -Raw
-            if ($content -match "(?m)^${VarName}=.*") {
-                $content = $content -replace "(?m)^${VarName}=.*", $line
-                Set-Content -Path $FilePath -Value $content -NoNewline
-            } else {
-                Add-Content -Path $FilePath -Value $line
-            }
-        } else {
-            # Create minimal .env
-            Set-Content -Path $FilePath -Value "${VarName}=${Value}"
-        }
-    }
-}
 
 # On Windows, Unix UIDs don't apply; WSL2 backend handles ownership.
 # We set PUID=1000 PGID=1000 as safe defaults (same as Docker Desktop's WSL2 default).
@@ -301,4 +361,13 @@ if ($args.Count -gt 0) {
     & docker compose up
 }
 
-Exit-WithPause -Code $LASTEXITCODE
+$exitCode = $LASTEXITCODE
+if (Test-IsNonInteractive) {
+    return $exitCode
+}
+Exit-WithPause -Code $exitCode
+}
+
+if ($MyInvocation.InvocationName -ne '.') {
+    exit (Invoke-StartBootstrap)
+}

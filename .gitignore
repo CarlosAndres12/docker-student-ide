@@ -5,6 +5,12 @@ openspec/
 .atl/
 .opencode/
 
+# ── Windows VM test harness ──
+# Replaced by dockur/windows (Docker). Container volumes live outside the
+# repo; keep the lesson: multi-GB volatile assets must never enter the repo
+# or OpenCode's snapshot feature tracks them as git objects.
+# (Previous harness: test/windows-vm/* — removed 2026-08-12)
+
 # Student workspace — contains student projects and generated content
 # We ignore everything inside by default but allow tracking a starter
 # package.json and .gitkeep via ! exceptions.

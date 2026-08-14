@@ -56,7 +56,6 @@ stable releases and update these values across **all** files:
 | opencode-ai (npm global) | `opencode-ai@latest` | `Dockerfile` (deps stage) |
 | freebuff (npm global) | `freebuff@latest` | `Dockerfile` (deps stage) |
 | gentle-ai (Go binary) | `gentle-ai v2.1.10` | `Dockerfile` (deps stage) |
-| MiMo (precompiled binary) | Installed via `curl -fsSL https://mimo.xiaomi.com/install \| bash` (not pinned; installer fetches latest) | `Dockerfile` (deps stage) |
 | Qoder CLI (precompiled binary) | Installed via `curl -fsSL https://qoder.com/install \| bash` (not pinned; installer fetches latest from CDN manifest) | `Dockerfile` (deps stage) |
 
 > npm packages use `@latest`; resolved versions are recorded at build time in the Dockerfile.
@@ -295,9 +294,6 @@ freebuff --version
 
 gentle-ai --version
 # Expected: v2.1.10
-
-mimo --version
-# Expected: a version number (e.g. x.y.z)
 
 qodercli --version
 # Expected: a version number (e.g. x.y.z)
@@ -547,6 +543,66 @@ OAuth tokens that are not persisted in the bind-mounted workspace are lost when
 the container is recreated.  See §7.3(b) for the one-time browser flow that
 persists tokens into `student_workspace/` so they survive restarts.
 
+### Windows Bootstrap
+
+**1. "running scripts is disabled" / UnauthorizedAccess**
+
+**Symptom**: `start.ps1` does not run because of the PowerShell execution policy.
+
+**Cause**: the execution policy blocks unsigned local scripts.
+
+**Fix**: allow local scripts (remote scripts stay blocked):
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+```
+
+`install.ps1` already runs `start.ps1` with `-ExecutionPolicy Bypass` in a child
+process; if you still see the error, apply the command above. Restart the
+terminal if the change does not take effect.
+
+**2. "docker: command not found"**
+
+**Symptom**: the script cannot find the `docker` command.
+
+**Cause**: Docker Desktop was installed in this session and the terminal PATH is
+stale.
+
+**Fix**: restart terminal, or re-run the script — both scripts rebuild the PATH
+from the registry (Machine + User) on startup. If the problem persists,
+reinstall Docker Desktop.
+
+**3. Script stuck in the daemon wait loop**
+
+**Symptom**: the script polls and Docker never responds.
+
+**Cause**: distinguish a missing CLI (install/reinstall Docker Desktop and
+restart the terminal) from a stopped daemon (Docker Desktop must be open).
+
+**Fix**: make sure Docker Desktop is open (system tray icon). The script waits
+up to 5 minutes (5-min wait, 60 × 5 s) in every branch before failing. If it
+gave up, open Docker Desktop manually and run the script again.
+
+**4. WSL installer asks for a Unix user**
+
+**Symptom**: during WSL install an interactive prompt asks to create a default
+Unix user (WSL user prompt: username + password).
+
+**Cause**: normal part of `wsl --install` on fresh installs.
+
+**Fix**: complete the prompt with a username and password. The script warns you
+before opening it; without that user WSL does not work.
+
+**5. "git is not installed"**
+
+**Symptom**: `install.ps1` cannot find `git`.
+
+**Cause**: Git is not installed or not on PATH.
+
+**Fix**: the script tries `winget install -e --id Git.Git` automatically; if
+that fails, install Git manually from https://git-scm.com/download/win and run
+the script again.
+
 ---
 
 ## 11. Alternative AI Agents
@@ -558,12 +614,11 @@ Pi is the default assistant; alternatives are opt-in and launched manually from 
 | **OpenCode** | `opencode` | Open-source AI coding agent; 75+ LLM providers via Models.dev, MCP support, free models included. MIT. |
 | **Freebuff** | `freebuff` | Zero-config, ad-supported free AI agent. Bundles free models: DeepSeek V4 Flash, Kimi K2.7, MiniMax M2.7. No API key needed. |
 | **gentle-ai** | `gentle-ai` | Ecosystem configurator (not an agent itself). Enhances any installed agent with persistent memory (Engram), Spec-Driven Development, curated skills, and MCP servers. |
-| **MiMo** | `mimo` | MiMo (Xiaomi, fork of OpenCode) — free `mimo-auto` channel, no API key, no login, 1M context window, 128K output, vision/image input. Free for a limited time. MIT-licensed. For headless use: `mimo --dangerously-skip-permissions` or `MIMOCODE_DANGEROUSLY_SKIP_PERMISSIONS=1` (opt-in, not set by default). |
 | **Qoder** | `qodercli` | Terminal-native agentic platform (NEXT code completion, Inline Chat, Ask/Agent, Quest Window for autonomous delegation). Free tier: email/Google/GitHub signup, no credit card. Qoder is a standalone agent not configured by gentle-ai. |
 
 > **OpenSpec** (Fission-AI / OpenSpec v1.6.0) is already installed as the SDD framework for this project. It is not re-installed as an agent.
 >
-> **gentle-ai scope note**: gentle-ai configures OpenCode only; Pi has gentle-pi; Freebuff, MiMo, and Qoder are standalone agents not configured by gentle-ai.
+> **gentle-ai scope note**: gentle-ai configures OpenCode only; Pi has gentle-pi; Freebuff and Qoder are standalone agents not configured by gentle-ai.
 
 Run `./agents.sh` to discover all installed agents and their launch commands.
 

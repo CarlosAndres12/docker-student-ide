@@ -162,21 +162,6 @@ RUN gentle-ai install --agents opencode --scope=global 2>&1 | tail -5 && \
 d.get('mcp',{}).pop('engram',None) and json.dump(d, open(p,'w'), indent=2); \
 print('removed engram MCP entry (redundant with engram plugin; caused TUI hang)')"
 
-# ── MiMo (Xiaomi, fork of OpenCode) ────────────────────────────────────────
-ARG MIMO_VERSION=0.1.8
-# MiMo is a terminal-native AI coding agent with a free `mimo-auto` channel
-# (1M context, 128K output, vision input, no API key, no login). Self-contained
-# precompiled binary (Bun-compiled, no runtime dependency). MIT-licensed.
-# Installed via the official Xiaomi installer with VERSION env var for pinning.
-# HOME=/config (set above) → binary lands at /config/.mimocode/bin/mimo,
-# copied to runtime below. The installer auto-detects OS/arch (glibc, AVX2,
-# musl) and extracts from Xiaomi's FDS CDN. curl --retry handles transient
-# network drops that plague large binary downloads on unstable connections.
-# Pinned via ARG MIMO_VERSION (default 0.1.8); bump in one place.
-# gentle-ai does NOT configure MiMo (standalone fork, outside gentle ecosystem).
-RUN VERSION="$MIMO_VERSION" curl --retry 3 --retry-delay 10 --connect-timeout 30 -fsSL https://mimo.xiaomi.com/install | bash && \
-    /config/.mimocode/bin/mimo --version
-
 # ── Qoder CLI (terminal-native AI coding agent with agentic platform) ────────
 # Qoder CLI (qodercli) provides NEXT code completion, Inline Chat, Ask/Agent
 # Chat, and Quest Window for autonomous task delegation. Free tier requires
@@ -285,16 +270,6 @@ RUN printf '{\n  "free": true\n}\n' > /config/.pi/free.json && \
 COPY --from=deps /config/.config/opencode /config/.config/opencode
 RUN chown -R abc:abc /config/.config/opencode
 
-# ── MiMo Binary (Xiaomi, fork of OpenCode) ──────────────────────────────────
-# The MiMo installer ran in the deps stage with HOME=/config and placed the
-# self-contained binary at /config/.mimocode/bin/mimo. We COPY the whole tree
-# (binary + config/cache dirs) and symlink the binary into /usr/local/bin so
-# `mimo` is on PATH without shell-rc edits. Free `mimo-auto` channel works
-# zero-config (no API key). gentle-ai does NOT configure MiMo (standalone fork).
-COPY --from=deps /config/.mimocode /config/.mimocode
-RUN chown -R abc:abc /config/.mimocode && \
-    ln -sf /config/.mimocode/bin/mimo /usr/local/bin/mimo
-
 # ── Qoder CLI Binary ─────────────────────────────────────────────────────────
 # The Qoder installer placed the binary tree at /config/.qoder/ and a symlink
 # entry point at /config/.local/bin/qodercli. We COPY both trees and symlink
@@ -312,7 +287,7 @@ RUN chown -R abc:abc /config/.qoder /config/.local && \
 ENV PI_FREE_ONLY=1
 
 # ── code-server Default User Settings ───────────────────────────────────────
-# Bake sensible defaults so AI agent TUIs (Pi, OpenCode, MiMo, Freebuff) running
+# Bake sensible defaults so AI agent TUIs (Pi, OpenCode, Freebuff) running
 # in the integrated terminal don't lose Ctrl+key combos to VS Code commands.
 # `terminal.integrated.commandsToSkipShell` lists VS Code commands whose keybinds
 # are NOT sent to the terminal when it's focused — by adding the agent-relevant
