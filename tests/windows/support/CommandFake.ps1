@@ -18,7 +18,7 @@ function New-CommandFake {
         $commandPath = Join-Path $Directory "$Name.cmd"
         $script = @"
 @echo off
->>"$LogPath" echo $Name %*
+echo $Name %* 1>>"$LogPath"
 if not "$Output"=="" echo $Output
 $ExtraScript
 exit /b $ExitCode
