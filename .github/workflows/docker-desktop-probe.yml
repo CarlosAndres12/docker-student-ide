@@ -24,8 +24,11 @@ jobs:
           $o = docker info --format '{{.OSType}}' 2>&1
           Write-Output "ostype=[$o] exit=$LASTEXITCODE"
           Write-Output "--- wsl ---"
-          wsl --version 2>&1 | Select-Object -First 1
-          wsl -l -v 2>&1
+          $wslver = wsl --version 2>&1 | Select-Object -First 1
+          Write-Output $wslver
+          $distros = wsl -l -v 2>&1
+          Write-Output $distros
+          exit 0
 
       - name: Install Docker Desktop
         shell: pwsh
@@ -33,6 +36,7 @@ jobs:
           $ErrorActionPreference = 'Continue'
           winget install -e --id Docker.DockerDesktop --accept-source-agreements --accept-package-agreements
           Write-Output "install exit=$LASTEXITCODE"
+          exit $LASTEXITCODE
 
       - name: Start Docker Desktop
         shell: pwsh
@@ -42,6 +46,7 @@ jobs:
           if (Test-Path $dd) {
             Start-Process $dd -ArgumentList "--accept-license"
             Write-Output "launched Docker Desktop"
+            exit 0
           } else {
             Write-Output "Docker Desktop.exe not found at $dd"
             exit 1
@@ -68,11 +73,13 @@ jobs:
           }
           Write-Output "=== ENGINE NOT READY - diagnostics ==="
           Write-Output "--- wsl distros ---"
-          wsl -l -v 2>&1
+          $all = wsl -l -v 2>&1
+          Write-Output $all
           Write-Output "--- DD process ---"
-          [bool](Get-Process 'Docker Desktop' -ErrorAction SilentlyContinue)
+          Write-Output ([bool](Get-Process 'Docker Desktop' -ErrorAction SilentlyContinue))
           Write-Output "--- ddCli info ---"
-          & $ddCli info 2>&1 | Select-Object -First 15
+          $info = & $ddCli info 2>&1 | Select-Object -First 15
+          Write-Output $info
           exit 1
 
       - name: Run a Linux container
@@ -81,3 +88,4 @@ jobs:
           $ErrorActionPreference = 'Continue'
           $ddCli = "C:\Program Files\Docker\Docker\resources\bin\docker.exe"
           & $ddCli run --rm hello-world
+          exit $LASTEXITCODE
