@@ -5,6 +5,7 @@ BeforeAll {
     $startScript = Get-Content (Join-Path $repositoryRoot "start.ps1") -Raw
     $installShell = Get-Content (Join-Path $repositoryRoot "scripts/install.sh") -Raw
     $startShell = Get-Content (Join-Path $repositoryRoot "start.sh") -Raw
+    $nativeScript = Get-Content (Join-Path $repositoryRoot "setup-windows.ps1") -Raw
 }
 
 Describe "Windows bootstrap contracts" {
@@ -45,5 +46,34 @@ Describe "Windows bootstrap contracts" {
     It "keeps the Windows UID/GID contract" {
         $startScript | Should -Match 'Update-EnvVar -VarName "PUID" -Value "1000"'
         $startScript | Should -Match 'Update-EnvVar -VarName "PGID" -Value "1000"'
+    }
+}
+
+Describe "Native Windows setup contracts" {
+    It "keeps the native Windows entry point in the repository" {
+        Test-Path (Join-Path $repositoryRoot "setup-windows.ps1") | Should -BeTrue
+        Test-Path (Join-Path $repositoryRoot "requirements-windows.txt") | Should -BeTrue
+    }
+
+    It "installs the toolchain through pinned winget package IDs" {
+        $nativeScript | Should -Match 'Invoke-WingetInstall -Id "Git\.Git"'
+        $nativeScript | Should -Match 'Invoke-WingetInstall -Id "OpenJS\.NodeJS\.LTS"'
+        $nativeScript | Should -Match 'Invoke-WingetInstall -Id "Python\.Python\.3\.13"'
+        $nativeScript | Should -Match 'Invoke-WingetInstall -Id "Microsoft\.VisualStudioCode"'
+    }
+
+    It "installs the Antigravity CLI from the official installer, never npm" {
+        $nativeScript | Should -Match 'irm https://antigravity\.google/cli/install\.ps1'
+        $nativeScript | Should -Not -Match 'npm install -g antigravity'
+    }
+
+    It "has the documented noninteractive seam" {
+        $nativeScript | Should -Match "DOCKER_STUDENT_IDE_NONINTERACTIVE"
+        $nativeScript | Should -Match 'if \(Test-IsNonInteractive\)'
+    }
+
+    It "is Docker-free (no compose, no daemon, no .env mutation)" {
+        $nativeScript | Should -Not -Match 'docker compose|docker-compose|docker info'
+        $nativeScript | Should -Not -Match 'Update-EnvVar'
     }
 }

@@ -1,23 +1,46 @@
 # docker-student-ide — Entorno de Desarrollo para Estudiantes
 
-Un entorno de desarrollo completo en el navegador, listo con **Node.js 22**, **Python 3.11** (stack de ML/DL), **Jupyter**, **MLflow** y **5 asistentes de IA** (Pi, OpenCode, Freebuff, gentle-ai, Qoder) — todo con un solo comando.
+Un entorno de desarrollo completo, listo con **Node.js**, **Python** (stack de ML/DL), **Jupyter**, **MLflow** y **asistentes de IA** (Pi, OpenCode, Freebuff, gentle-ai, Qoder y Antigravity) — todo con un solo comando.
 
-Sin instalar nada en tu computadora. Solo necesitas Docker — y los scripts lo instalan si hace falta.
+En **Windows** se instala todo de forma **nativa** (sin Docker). En **macOS / Linux** corre en el navegador con Docker.
 
 ---
 
-## Instalación (un solo comando)
+## Instalación
+
+### Windows (nativa — preferida)
+
+Instala todo de forma nativa (Git, Node.js, Python, VS Code y los agentes de IA)
+directamente en tu máquina, **sin Docker**.
+
+```powershell
+git clone https://github.com/CarlosAndres12/docker-student-ide.git
+cd docker-student-ide
+.\setup-windows.ps1
+```
+
+El script instala automáticamente:
+
+- **Git, Node.js LTS y Python (última versión)** vía `winget`.
+- **Stack Python de ML/DL** en un entorno virtual `.venv` (PyTorch, TensorFlow, Jupyter, MLflow, etc.).
+- **Agentes de IA**: Pi, OpenCode, Freebuff, gentle-ai, Qoder y Antigravity CLI (`agy`).
+- **Visual Studio Code** con las extensiones del entorno.
+
+Al terminar abre VS Code en `student_workspace/`. Todo es idempotente: volver a
+ejecutarlo solo instala lo que falte.
+
+> Detalles técnicos y versión de cada herramienta: `docs/windows-native-setup.md`.
+
+### macOS / Linux (con Docker)
 
 Copia y pega el comando de abajo en tu terminal. El script clona el repositorio,
 instala Docker si hace falta e inicia el entorno automáticamente.
-
-**macOS / Linux**
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/CarlosAndres12/docker-student-ide/main/scripts/install.sh | bash
 ```
 
-**Windows (PowerShell)**
+### Windows (con Docker — alternativa)
 
 ```powershell
 irm https://raw.githubusercontent.com/CarlosAndres12/docker-student-ide/main/scripts/install.ps1 | iex
@@ -25,9 +48,9 @@ irm https://raw.githubusercontent.com/CarlosAndres12/docker-student-ide/main/scr
 
 > ⏱️ **La primera vez tarda entre 10 y 20 minutos** (descarga e instala todo el stack).
 > Las siguientes veces es mucho más rápido gracias a la caché de Docker.
-
-Una vez que termine, abre **http://localhost:8443** en tu navegador y usa la
-contraseña **`student`**.
+>
+> Una vez que termine, abre **http://localhost:8443** en tu navegador y usa la
+> contraseña **`student`**.
 
 ### Alternativa: instalación manual
 
@@ -37,7 +60,7 @@ Si prefieres clonar el repositorio manualmente:
 git clone https://github.com/CarlosAndres12/docker-student-ide.git
 cd docker-student-ide
 ./start.sh                    # macOS / Linux
-# .\start.ps1                 # Windows (PowerShell)
+# .\start.ps1                 # Windows (PowerShell, con Docker)
 ```
 
 O si ya tienes Docker y no quieres usar los scripts:
@@ -52,13 +75,15 @@ docker compose up
 
 ## ¿Qué es esto?
 
-Es un "laboratorio portátil" que corre dentro de un contenedor Docker y se abre en tu navegador. Funciona para varias materias:
+Es un "laboratorio portátil" con todo lo necesario para programar. En **Windows** se
+instala de forma **nativa** (VS Code); en **macOS / Linux** corre dentro de un
+contenedor Docker y se abre en el navegador. Funciona para varias materias:
 
 - **Desarrollo Web** — Node.js, React, Vite, TypeScript
 - **Ciencia de Datos / Machine Learning** — Python, PyTorch, TensorFlow, Jupyter, MLflow
 - **Programación general** — todo lo anterior disponible a la vez
 
-Todo lo que guardes queda en la carpeta `student_workspace/` de tu computadora, así que **no pierdes tu trabajo** al reiniciar el contenedor.
+Todo lo que guardes queda en la carpeta `student_workspace/` de tu computadora, así que **no pierdes tu trabajo** al reiniciar.
 
 ---
 
@@ -145,7 +170,7 @@ docker compose up -d
 - Plantilla `package.json` con React 18, react-router-dom, axios, eslint, prettier, vitest, @testing-library/react (todas las versiones fijadas)
 
 ### Stack de Python / ML / DL
-- **Python 3.11** con venv y pip
+- **Python** con venv y pip (3.11 en Docker; última versión en Windows nativo)
 - Núcleo: pandas, numpy, scipy, scikit-learn
 - Deep learning (CPU por defecto): PyTorch, TensorFlow
 - Boosting: xgboost, lightgbm
@@ -166,6 +191,10 @@ docker compose up -d
 ---
 
 ## Puertos y cómo acceder
+
+> Esta sección aplica al modo **Docker** (macOS / Linux). En **Windows nativo**
+> no hay puertos: VS Code se abre localmente y Jupyter/MLflow corren en
+> `localhost` desde tu propia terminal.
 
 | Puerto | Servicio | Cómo se accede |
 |---|---|---|
@@ -241,13 +270,16 @@ Jupyter para notebooks, y MLflow para seguimiento de experimentos.
 
 Abre una terminal dentro de code-server (**Terminal → New Terminal**) y ejecuta:
 
+> En **Windows nativo**, usa la terminal integrada de VS Code y activa primero el
+> entorno Python: `.\.venv\Scripts\Activate.ps1` (en PowerShell).
+
 ```bash
 # Node.js
-node -v            # esperado: v22.23.1
+node -v            # esperado: v22.x
 npm -v
 
 # Python y stack ML/DL
-python --version   # esperado: Python 3.11.x
+python --version   # esperado: Python 3.11.x (Docker) o la última (nativo)
 python -c "import pandas, numpy, scipy, sklearn; print('Stack core OK')"
 python -c "import torch; print('PyTorch', torch.__version__)"
 python -c "import tensorflow as tf; print('TensorFlow', tf.__version__)"
@@ -267,6 +299,9 @@ gentle-ai --version
 
 # Qoder (agente de IA alternativo)
 qodercli --version
+
+# Antigravity CLI (solo Windows nativo)
+agy --version
 
 # GPU (solo si la habilitaste)
 nvidia-smi
@@ -346,10 +381,11 @@ Pi es el asistente por defecto; las alternativas son opcionales y se lanzan manu
 | **Freebuff** | `freebuff` | DeepSeek V4 Flash, Kimi K2.7, MiniMax M2.7 incluidos |
 | **gentle-ai** | `gentle-ai` | Mejora cualquier agente con memoria Engram, SDD y skills |
 | **Qoder** | `qodercli` | Plataforma agentica con NEXT (autocompletado), Inline Chat, Ask/Agent Chat y Quest Window para delegacion autonoma. Registro gratuito con email/Google/GitHub (sin tarjeta de credito). |
+| **Antigravity CLI** | `agy` | Agente de Google que entiende tu código y ejecuta comandos desde la terminal. Solo en Windows nativo. |
 
 > **OpenSpec** (Fission-AI) ya está instalado como el framework SDD del proyecto. No se reinstala como agente.
 >
-> **Nota sobre gentle-ai**: gentle-ai configura solo OpenCode; Pi ya tiene gentle-pi; Freebuff y Qoder son agentes independientes no configurados por gentle-ai.
+> **Nota sobre gentle-ai**: gentle-ai configura solo OpenCode; Pi ya tiene gentle-pi; Freebuff, Qoder y Antigravity son agentes independientes no configurados por gentle-ai.
 
 Ejecuta `./agents.sh` para ver todos los agentes instalados y sus comandos de lanzamiento.
 
@@ -628,12 +664,15 @@ de varios GB de CUDA). Si tu curso necesita GPU:
 |---|---|
 | `Dockerfile` | Receta de construcción de la imagen (multi-etapa, comentada) |
 | `docker-compose.yml` | Orquestación del contenedor, puertos, volúmenes |
-| `requirements.txt` | Paquetes de Python con versiones fijadas |
+| `setup-windows.ps1` | **Instalación nativa en Windows (sin Docker)** |
+| `requirements.txt` | Paquetes de Python del contenedor (Python 3.11) |
+| `requirements-windows.txt` | Paquetes de Python de Windows nativo (Python 3.13) |
 | `package.json` | Plantilla de inicio para proyectos frontend |
 | `.env.example` | Plantilla de referencia (documenta todas las variables) |
 | `.env` | **Configuración lista para usar** — viene con valores por defecto; edítalo solo para personalizar |
 | `student_workspace/` | **Tu trabajo** — persiste en tu computadora |
 | `docs/deployment-guide.md` | Guía técnica detallada (en inglés) |
+| `docs/windows-native-setup.md` | Guía del setup nativo en Windows (versiones y decisiones) |
 
 ---
 

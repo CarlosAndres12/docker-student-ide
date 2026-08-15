@@ -1,0 +1,54 @@
+# =============================================================================
+# Python ML/DL Stack — Native Windows (Python 3.13)
+# =============================================================================
+# Native-Windows counterpart to requirements.txt. The Docker image stays on
+# Python 3.11 with requirements.txt; the native setup script (setup-windows.ps1)
+# installs the LATEST Python (3.13) and uses THIS file, because several 2024-era
+# pins in requirements.txt have no cp313 wheels.
+#
+# torch / torchvision are installed FIRST from the CPU wheel index by the setup
+# script (mirroring the Dockerfile); pip skips the already-satisfied pins below.
+# All versions target Python 3.13 and are recorded in docs/windows-native-setup.md.
+# =============================================================================
+
+# ── Core Data Science ────────────────────────────────────────────────────────
+pandas==2.2.3
+numpy==2.2.3
+scipy==1.15.1
+scikit-learn==1.6.1
+
+# ── Deep Learning (CPU-only defaults) ────────────────────────────────────────
+# PyTorch and torchvision installed separately via the CPU wheel index
+torch==2.6.0
+torchvision==0.21.0
+# CPU-only TensorFlow (2.20 is the first line with Python 3.13 support)
+tensorflow-cpu==2.20.0
+
+# ── Experiment Tracking & Hyperparameter Optimisation ────────────────────────
+optuna==4.2.1
+mlflow==2.21.3
+
+# ── Gradient Boosting ────────────────────────────────────────────────────────
+xgboost==3.0.2
+lightgbm==4.6.0
+
+# ── NLP & Computer Vision ────────────────────────────────────────────────────
+transformers==4.51.3
+opencv-python==4.11.0.86
+nltk==3.9.1
+
+# ── Visualisation ────────────────────────────────────────────────────────────
+matplotlib==3.10.1
+seaborn==0.13.2
+plotly==6.0.1
+
+# ── Notebooks ────────────────────────────────────────────────────────────────
+jupyter==1.1.1
+jupyterlab==4.3.6
+ipywidgets==8.1.5
+
+# ── Developer Quality-of-Life ────────────────────────────────────────────────
+black==25.1.0
+ruff==0.11.6
+pytest==8.3.5
+python-dotenv==1.1.0

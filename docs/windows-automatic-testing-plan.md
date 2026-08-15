@@ -120,6 +120,27 @@ every pull request.
 | R-01 | Native Windows | A prepared Docker Desktop fixture runs `start.ps1 -d`. | Successful Compose startup, expected container state, and the configured browser-facing endpoint. |
 | R-02 | External VM plus native Windows | The runtime starts, a marker is written to `student_workspace`, the stack is stopped and started again. | Container/runtime health and marker persistence without treating persistence as proof of Docker Desktop integration. |
 
+### Native Windows (Docker-free) scenarios
+
+The preferred Windows path (`setup-windows.ps1`) has its own scenario set. It
+mirrors the Docker bootstrap but provisions Git, Node, Python, VS Code, and the
+AI agents natively, so the Docker-specific premises (WSL, Docker Desktop, the
+Compose daemon, `.env`) do not apply.
+
+| ID | Layer | Scenario | Required evidence |
+|---|---|---|---|
+| N-01 | Contract | `setup-windows.ps1` and `requirements-windows.txt` exist; winget IDs, the Antigravity installer command, and the noninteractive seam are present; the script never invokes Docker or mutates `.env`. | Source assertions, no Docker command shapes, no `Update-EnvVar`. |
+| N-02 | Pester | `winget` is missing. | Fail-fast with actionable guidance and nonzero result before any install. |
+| N-03 | Pester | A pinned global npm tool is missing or already present. | Exact `npm install -g` command in the missing case; no `npm` call in the present case. |
+| N-04 | Pester | Antigravity CLI install command shape. | Uses `irm https://antigravity.google/cli/install.ps1 | iex` and never the npm placeholder. |
+| N-05 | Pester | VS Code user settings merge. | Creates the file, preserves existing keys, and stays idempotent. |
+| N-06 | Pester | The VS Code extension harness. | The marketplace set includes pylance and docker (unavailable on code-server). |
+| N-10 | Native Windows | A disposable Windows 11 fixture runs `setup-windows.ps1`. | Git, Node, Python, and VS Code are installed; the `.venv` and extension set are present. |
+| N-11 | Native Windows | The native runtime is verified end-to-end. | Python stack imports, agent binaries respond, and VS Code opens the workspace. |
+
+N-10/N-11 are pending until a disposable native-Windows fixture exists; pending
+tests are not coverage claims.
+
 The documented one-liner remains a separate networked contract test:
 
 ```powershell
