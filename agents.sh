@@ -19,6 +19,7 @@ OpenCode|opencode|opencode|75+ proveedores via Models.dev, MCP, modelos gratuito
 Freebuff|freebuff|freebuff|Zero-config, sin API key, modelos gratuitos (con ads)
 Qoder|qodercli|qodercli|Registro email/Google/GitHub (sin tarjeta), QUEST/NEXT/Inline Chat
 gentle-ai|gentle-ai|gentle-ai|Configurador de ecosistema (memoria Engram, SDD, skills)
+Antigravity|agy|agy|Agente de Google desde la terminal (solo Windows nativo)
 "
 
 printf '%-12s %-12s %s\n' "AGENTE" "BINARIO" "COMANDO"
