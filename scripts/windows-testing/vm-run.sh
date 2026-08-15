@@ -95,6 +95,7 @@ New-Item -ItemType Directory -Path (Join-Path \$repoRoot 'results') -Force | Out
     started  = (Get-Date).ToUniversalTime().ToString('o')
 }
 \$meta | ConvertTo-Json | Set-Content -Path (Join-Path \$repoRoot 'results\run-meta.json')
+\$env:PESTER_TEST_PATH = Join-Path \$repoRoot 'tests\windows'
 \$env:PESTER_RESULTS_PATH = Join-Path \$repoRoot 'results\windows-unit.xml'
 Set-Location \$repoRoot
 \$config = & (Join-Path \$repoRoot 'tests\windows\pester.config.ps1')

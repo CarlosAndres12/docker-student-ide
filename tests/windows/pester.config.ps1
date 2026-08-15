@@ -1,7 +1,13 @@
 Import-Module Pester -Force
 
 $configuration = New-PesterConfiguration
-$configuration.Run.Path = Join-Path $PSScriptRoot "unit"
+$testPath = $env:PESTER_TEST_PATH
+if (-not $testPath) {
+    $testPath = Join-Path $PSScriptRoot "unit"
+} elseif (-not [System.IO.Path]::IsPathRooted($testPath)) {
+    $testPath = Join-Path $PSScriptRoot $testPath
+}
+$configuration.Run.Path = $testPath
 $configuration.Run.Exit = $true
 $configuration.Output.Verbosity = "Detailed"
 $configuration.TestResult.Enabled = $true

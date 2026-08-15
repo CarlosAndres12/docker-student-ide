@@ -1,11 +1,11 @@
 function Invoke-BootstrapScenario {
     param(
-        [Parameter(Mandatory)]
-        [string]$ScriptPath,
+        [string]$ScriptPath = "",
         [string[]]$Arguments = @(),
         [hashtable]$Environment = @{},
         [string[]]$PrependPath = @(),
-        [string[]]$AdditionalArgs = @()
+        [string[]]$AdditionalArgs = @(),
+        [string]$Command = ""
     )
 
     $previous = @{}
@@ -38,9 +38,14 @@ function Invoke-BootstrapScenario {
     try {
         # Bypass is the default so generated drivers can Import-Module Pester
         # even under the Windows Restricted default policy. Tests that need a
-        # specific policy (I-04) override AdditionalArgs explicitly.
+        # specific policy (I-04) override AdditionalArgs explicitly; the
+        # last -ExecutionPolicy occurrence wins.
         $launcherArgs = @("-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass") + @($AdditionalArgs)
-        $output = & $launcherPath @launcherArgs -File $ScriptPath @Arguments 2>&1
+        if ($Command) {
+            $output = & $launcherPath @launcherArgs -Command $Command 2>&1
+        } else {
+            $output = & $launcherPath @launcherArgs -File $ScriptPath @Arguments 2>&1
+        }
         [pscustomobject]@{
             ExitCode = $LASTEXITCODE
             Output = @($output)
