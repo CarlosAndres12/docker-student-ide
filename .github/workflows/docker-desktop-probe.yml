@@ -1,0 +1,58 @@
+name: docker-desktop-probe
+
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - name: Inspect preinstalled Docker
+        shell: pwsh
+        run: |
+          Write-Output "--- docker CLI ---"
+          docker --version
+          Write-Output "--- compose ---"
+          docker compose version
+          Write-Output "--- current engine ostype ---"
+          docker info --format '{{.OSType}}' 2>&1
+          Write-Output "--- winget ---"
+          winget --version
+
+      - name: Install Docker Desktop
+        shell: pwsh
+        run: |
+          winget install -e --id Docker.DockerDesktop --accept-source-agreements --accept-package-agreements
+
+      - name: Start Docker Desktop
+        shell: pwsh
+        run: |
+          $dd = "C:\Program Files\Docker\Docker\Docker Desktop.exe"
+          if (Test-Path $dd) {
+            Start-Process $dd -ArgumentList "--accept-license"
+            Write-Output "launched Docker Desktop"
+          } else {
+            Write-Output "Docker Desktop.exe not found at $dd"
+            exit 1
+          }
+
+      - name: Wait for Linux engine
+        shell: pwsh
+        run: |
+          for ($i = 0; $i -lt 90; $i++) {
+            $ostype = docker info --format '{{.OSType}}' 2>$null
+            if ($LASTEXITCODE -eq 0 -and $ostype -eq 'linux') {
+              Write-Output "LINUX ENGINE READY (ostype=$ostype) after $($i*10)s"
+              exit 0
+            }
+            if (($i % 6) -eq 0) { Write-Output "waiting... $($i*10)s (ostype=[$ostype])" }
+            Start-Sleep 10
+          }
+          Write-Output "ENGINE NOT READY"
+          exit 1
+
+      - name: Run a Linux container
+        shell: pwsh
+        run: |
+          docker run --rm hello-world
