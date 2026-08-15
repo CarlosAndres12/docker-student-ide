@@ -11,19 +11,21 @@ jobs:
       - name: Inspect preinstalled Docker
         shell: pwsh
         run: |
-          Write-Output "--- docker CLI ---"
+          Write-Output "docker path: $((Get-Command docker).Source)"
           docker --version
-          Write-Output "--- compose ---"
           docker compose version
-          Write-Output "--- current engine ostype ---"
-          docker info --format '{{.OSType}}' 2>&1
-          Write-Output "--- winget ---"
-          winget --version
+          Write-Output "--- preinstalled engine ostype ---"
+          $o = docker info --format '{{.OSType}}' 2>&1
+          Write-Output "ostype=[$o] exit=$LASTEXITCODE"
+          Write-Output "--- wsl ---"
+          wsl --version 2>&1 | Select-Object -First 1
+          wsl -l -v 2>&1
 
       - name: Install Docker Desktop
         shell: pwsh
         run: |
           winget install -e --id Docker.DockerDesktop --accept-source-agreements --accept-package-agreements
+          Write-Output "install exit=$LASTEXITCODE"
 
       - name: Start Docker Desktop
         shell: pwsh
@@ -37,22 +39,37 @@ jobs:
             exit 1
           }
 
-      - name: Wait for Linux engine
+      - name: Wait for Linux engine (explicit Docker Desktop CLI)
         shell: pwsh
         run: |
-          for ($i = 0; $i -lt 90; $i++) {
-            $ostype = docker info --format '{{.OSType}}' 2>$null
+          $ddCli = "C:\Program Files\Docker\Docker\resources\bin\docker.exe"
+          Write-Output "ddCli exists: $(Test-Path $ddCli)"
+          for ($i = 0; $i -lt 60; $i++) {
+            $ostype = & $ddCli info --format '{{.OSType}}' 2>$null
             if ($LASTEXITCODE -eq 0 -and $ostype -eq 'linux') {
               Write-Output "LINUX ENGINE READY (ostype=$ostype) after $($i*10)s"
               exit 0
             }
-            if (($i % 6) -eq 0) { Write-Output "waiting... $($i*10)s (ostype=[$ostype])" }
+            if (($i % 6) -eq 0) {
+              Write-Output "waiting... $($i*10)s ostype=[$ostype] exit=$LASTEXITCODE"
+              $d = wsl -l -v 2>&1 | Select-String docker-desktop
+              Write-Output "distro: $d"
+            }
             Start-Sleep 10
           }
-          Write-Output "ENGINE NOT READY"
+          Write-Output "=== ENGINE NOT READY — diagnostics ==="
+          Write-Output "--- default docker path ---"
+          try { (Get-Command docker).Source } catch { "no docker on PATH" }
+          Write-Output "--- wsl distros ---"
+          wsl -l -v 2>&1
+          Write-Output "--- DD process ---"
+          [bool](Get-Process 'Docker Desktop' -ErrorAction SilentlyContinue)
+          Write-Output "--- ddCli info ---"
+          & $ddCli info 2>&1 | Select-Object -First 15
           exit 1
 
       - name: Run a Linux container
         shell: pwsh
         run: |
-          docker run --rm hello-world
+          $ddCli = "C:\Program Files\Docker\Docker\resources\bin\docker.exe"
+          & $ddCli run --rm hello-world
