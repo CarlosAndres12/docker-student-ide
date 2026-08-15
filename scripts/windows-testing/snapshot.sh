@@ -22,6 +22,8 @@
 #   scripts/windows-testing/snapshot.sh create
 #   scripts/windows-testing/snapshot.sh list
 #   scripts/windows-testing/snapshot.sh delete
+#   scripts/windows-testing/snapshot.sh init    # create a new baseline (thin overlay over base)
+#   scripts/windows-testing/snapshot.sh commit  # merge the overlay into its backing baseline
 #
 # The base images, overlay, SSH keys, and results live outside the
 # repository. Never delete the protected post-OpenSSH master snapshot.
@@ -86,9 +88,30 @@ cmd_delete() {
     echo "deleted disposable overlay: $OVERLAY"
 }
 
+cmd_init() {
+    require_stopped
+    [ "$BASELINE" != "clean-bootstrap" ] || die "init is only for a new (non-clean-bootstrap) baseline"
+    [ ! -e "$BASE_IMAGE" ] || die "baseline already exists: $BASE_IMAGE (delete it first to rebuild)"
+    [ -f "$BASE_DIR/base.qcow2" ] || die "clean-bootstrap base not found: $BASE_DIR/base.qcow2"
+    qemu-img create -q -f qcow2 -F qcow2 -b "$BASE_DIR/base.qcow2" "$BASE_IMAGE"
+    echo "created baseline: $BASE_IMAGE (backing: base.qcow2)"
+}
+
+cmd_commit() {
+    require_stopped
+    [ "$BASELINE" != "clean-bootstrap" ] || die "refusing to commit into the immutable clean-bootstrap base"
+    [ -e "$OVERLAY" ] || die "no overlay at $OVERLAY"
+    qemu-img commit "$OVERLAY"
+    echo "committed overlay into $BASE_IMAGE"
+    rm -f "$OVERLAY"
+    echo "removed disposable overlay"
+}
+
 case "${1:-}" in
     create) cmd_create ;;
     list)   cmd_list ;;
     delete) cmd_delete ;;
-    *) echo "usage: $0 {create|list|delete}" >&2; exit 2 ;;
+    init)   cmd_init ;;
+    commit) cmd_commit ;;
+    *) echo "usage: $0 {create|list|delete|init|commit}" >&2; exit 2 ;;
 esac
