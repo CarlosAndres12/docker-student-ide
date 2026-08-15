@@ -11,7 +11,13 @@ jobs:
       - name: Inspect preinstalled Docker
         shell: pwsh
         run: |
-          Write-Output "docker path: $((Get-Command docker).Source)"
+          $ErrorActionPreference = 'Continue'
+          try {
+            $c = Get-Command docker -ErrorAction SilentlyContinue
+            Write-Output "docker path: $($c.Source)"
+          } catch {
+            Write-Output "docker not found on PATH"
+          }
           docker --version
           docker compose version
           Write-Output "--- preinstalled engine ostype ---"
@@ -24,12 +30,14 @@ jobs:
       - name: Install Docker Desktop
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Continue'
           winget install -e --id Docker.DockerDesktop --accept-source-agreements --accept-package-agreements
           Write-Output "install exit=$LASTEXITCODE"
 
       - name: Start Docker Desktop
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Continue'
           $dd = "C:\Program Files\Docker\Docker\Docker Desktop.exe"
           if (Test-Path $dd) {
             Start-Process $dd -ArgumentList "--accept-license"
@@ -42,6 +50,7 @@ jobs:
       - name: Wait for Linux engine (explicit Docker Desktop CLI)
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Continue'
           $ddCli = "C:\Program Files\Docker\Docker\resources\bin\docker.exe"
           Write-Output "ddCli exists: $(Test-Path $ddCli)"
           for ($i = 0; $i -lt 60; $i++) {
@@ -57,9 +66,7 @@ jobs:
             }
             Start-Sleep 10
           }
-          Write-Output "=== ENGINE NOT READY — diagnostics ==="
-          Write-Output "--- default docker path ---"
-          try { (Get-Command docker).Source } catch { "no docker on PATH" }
+          Write-Output "=== ENGINE NOT READY - diagnostics ==="
           Write-Output "--- wsl distros ---"
           wsl -l -v 2>&1
           Write-Output "--- DD process ---"
@@ -71,5 +78,6 @@ jobs:
       - name: Run a Linux container
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Continue'
           $ddCli = "C:\Program Files\Docker\Docker\resources\bin\docker.exe"
           & $ddCli run --rm hello-world
