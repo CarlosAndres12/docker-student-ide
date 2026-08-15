@@ -27,6 +27,7 @@ BeforeAll {
             DOCKER_STUDENT_IDE_NONINTERACTIVE = "1"
             TEST_WORKSPACE = $Workspace
             APPDATA = (Join-Path $Workspace "appdata")
+            FAKE_DIR = $Fakes
         }
         foreach ($key in $ExtraEnvironment.Keys) {
             $environment[$key] = $ExtraEnvironment[$key]

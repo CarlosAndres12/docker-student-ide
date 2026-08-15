@@ -25,6 +25,7 @@ BeforeAll {
         $environment = @{
             DOCKER_STUDENT_IDE_NONINTERACTIVE = "1"
             TEST_WORKSPACE = $Workspace
+            FAKE_DIR = $Fakes
         }
         foreach ($key in $ExtraEnvironment.Keys) {
             $environment[$key] = $ExtraEnvironment[$key]
@@ -135,10 +136,14 @@ Describe "I-03 missing Git" -Tag Unit {
         }
     }
 
-    It "continues to clone after winget installs Git successfully" -Skip:$windowsHost {
+    It "continues to clone after winget installs Git successfully" {
         # On Windows the bootstrap rebuilds PATH from the registry after
         # winget, which cannot be simulated without mutating the machine
         # registry; live winget coverage belongs to the disposable-VM layer.
+        if ([System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Win32NT) {
+            Set-ItResult -Skipped -Because "requires PATH injection beyond the registry refresh"
+            return
+        }
         $ws = New-BootstrapTestWorkspace
         try {
             $fakes = New-FakeDir $ws.Path
