@@ -6,6 +6,7 @@ BeforeAll {
     $installShell = Get-Content (Join-Path $repositoryRoot "scripts/install.sh") -Raw
     $startShell = Get-Content (Join-Path $repositoryRoot "start.sh") -Raw
     $nativeScript = Get-Content (Join-Path $repositoryRoot "setup-windows.ps1") -Raw
+    $nativeInstallScript = Get-Content (Join-Path $repositoryRoot "scripts/install-native.ps1") -Raw
 }
 
 Describe "Windows bootstrap contracts" {
@@ -75,5 +76,37 @@ Describe "Native Windows setup contracts" {
     It "is Docker-free (no compose, no daemon, no .env mutation)" {
         $nativeScript | Should -Not -Match 'docker compose|docker-compose|docker info'
         $nativeScript | Should -Not -Match 'Update-EnvVar'
+    }
+
+    It "enforces version gating for Node and Python" {
+        $nativeScript | Should -Match 'function Get-NodeMajorVersion'
+        $nativeScript | Should -Match 'function Resolve-PythonLauncher'
+        $nativeScript | Should -Match '\$nodeMajor -ge 22'
+        $nativeScript | Should -Match 'Python\.Python\.3\.13'
+    }
+}
+
+Describe "Native Windows installer contracts" {
+    It "keeps the native one-liner entry point in the repository" {
+        Test-Path (Join-Path $repositoryRoot "scripts/install-native.ps1") | Should -BeTrue
+    }
+
+    It "downloads the repository as a ZIP instead of cloning with git" {
+        $nativeInstallScript | Should -Match 'archive/refs/heads/main\.zip'
+        $nativeInstallScript | Should -Not -Match 'git clone'
+    }
+
+    It "enforces TLS 1.2 for PowerShell 5.1 downloads" {
+        $nativeInstallScript | Should -Match 'ServicePointManager'
+        $nativeInstallScript | Should -Match 'Tls12'
+    }
+
+    It "runs setup-windows.ps1 through a child process with execution-policy bypass" {
+        $nativeInstallScript | Should -Match 'powershell\.exe -NoProfile -ExecutionPolicy Bypass -File'
+        $nativeInstallScript | Should -Match "setup-windows\.ps1"
+    }
+
+    It "has the documented noninteractive seam" {
+        $nativeInstallScript | Should -Match "DOCKER_STUDENT_IDE_NONINTERACTIVE"
     }
 }

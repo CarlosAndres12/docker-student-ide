@@ -155,3 +155,95 @@ Describe "N-06 VS Code extension harness" -Tag Unit {
         $script | Should -Match "Gruntfuggly\.todo-tree"
     }
 }
+
+Describe "N-07 version gating" -Tag Unit {
+    It "reports Node major 0 when node is absent" {
+        $ws = New-BootstrapTestWorkspace
+        try {
+            $fakes = New-FakeDir $ws.Path
+
+            $result = Invoke-SetupScenario -Workspace $ws.Path -Fakes $fakes -DriverBody @(
+                'function Get-Command {'
+                '    param([string]$Name, [string]$ErrorAction)'
+                '    if ($Name -eq "node") { return $null }'
+                '    Microsoft.PowerShell.Core\Get-Command @PSBoundParameters'
+                '}'
+                'Set-Location $env:TEST_WORKSPACE'
+                '$m = Get-NodeMajorVersion'
+                'Write-Host "MAJOR=$m"'
+                'exit 0'
+            )
+
+            $result.ExitCode | Should -Be 0
+            ($result.Output -join "`n") | Should -Match "MAJOR=0"
+        } finally {
+            & $ws.Cleanup
+        }
+    }
+
+    It "parses the major from an installed Node version" {
+        $ws = New-BootstrapTestWorkspace
+        try {
+            $fakes = New-FakeDir $ws.Path
+            $nodeLog = Join-Path $ws.Path "node.log"
+            $null = New-CommandFake -Name "node" -Directory $fakes -LogPath $nodeLog -ExitCode 0 -Output "v22.23.1"
+
+            $result = Invoke-SetupScenario -Workspace $ws.Path -Fakes $fakes -DriverBody @(
+                'Set-Location $env:TEST_WORKSPACE'
+                '$m = Get-NodeMajorVersion'
+                'Write-Host "MAJOR=$m"'
+                'exit 0'
+            )
+
+            $result.ExitCode | Should -Be 0
+            ($result.Output -join "`n") | Should -Match "MAJOR=22"
+        } finally {
+            & $ws.Cleanup
+        }
+    }
+
+    It "resolves no launcher when neither py nor python is present" {
+        $ws = New-BootstrapTestWorkspace
+        try {
+            $fakes = New-FakeDir $ws.Path
+
+            $result = Invoke-SetupScenario -Workspace $ws.Path -Fakes $fakes -DriverBody @(
+                'function Get-Command {'
+                '    param([string]$Name, [string]$ErrorAction)'
+                '    if ($Name -eq "py" -or $Name -eq "python") { return $null }'
+                '    Microsoft.PowerShell.Core\Get-Command @PSBoundParameters'
+                '}'
+                'Set-Location $env:TEST_WORKSPACE'
+                '$r = Resolve-PythonLauncher'
+                'Write-Host ("RESOLVED=" + ($null -eq $r))'
+                'exit 0'
+            )
+
+            $result.ExitCode | Should -Be 0
+            ($result.Output -join "`n") | Should -Match "RESOLVED=True"
+        } finally {
+            & $ws.Cleanup
+        }
+    }
+
+    It "resolves the py launcher when py -3.13 is available" {
+        $ws = New-BootstrapTestWorkspace
+        try {
+            $fakes = New-FakeDir $ws.Path
+            $pyLog = Join-Path $ws.Path "py.log"
+            $null = New-CommandFake -Name "py" -Directory $fakes -LogPath $pyLog -ExitCode 0 -Output "Python 3.13.0"
+
+            $result = Invoke-SetupScenario -Workspace $ws.Path -Fakes $fakes -DriverBody @(
+                'Set-Location $env:TEST_WORKSPACE'
+                '$r = Resolve-PythonLauncher'
+                'Write-Host ("ARGS=" + ($r.Args -join ","))'
+                'exit 0'
+            )
+
+            $result.ExitCode | Should -Be 0
+            ($result.Output -join "`n") | Should -Match "ARGS=-3\.13"
+        } finally {
+            & $ws.Cleanup
+        }
+    }
+}

@@ -11,17 +11,22 @@ En **Windows** se instala todo de forma **nativa** (sin Docker). En **macOS / Li
 ### Windows (nativa — preferida)
 
 Instala todo de forma nativa (Git, Node.js, Python, VS Code y los agentes de IA)
-directamente en tu máquina, **sin Docker**.
+directamente en tu máquina, **sin Docker**. Un solo comando.
+
+Abre PowerShell y pega:
 
 ```powershell
-git clone https://github.com/CarlosAndres12/docker-student-ide.git
-cd docker-student-ide
-.\setup-windows.ps1
+irm https://raw.githubusercontent.com/CarlosAndres12/docker-student-ide/main/scripts/install-native.ps1 | iex
 ```
 
-El script instala automáticamente:
+> 💡 Córrelo desde la carpeta donde quieras que viva tu workspace (por ejemplo
+> `Documentos`). No necesitas tener **Git** ni permisos de ejecución de scripts:
+> el comando se encarga de todo (baja el repositorio, instala Git si falta y
+> configura el resto).
 
-- **Git, Node.js LTS y Python (última versión)** vía `winget`.
+El script instala automáticamente (y se salta lo que ya tengas):
+
+- **Git, Node.js LTS (22+) y Python (3.13+)** vía `winget`.
 - **Stack Python de ML/DL** en un entorno virtual `.venv` (PyTorch, TensorFlow, Jupyter, MLflow, etc.).
 - **Agentes de IA**: Pi, OpenCode, Freebuff, gentle-ai, Qoder y Antigravity CLI (`agy`).
 - **Visual Studio Code** con las extensiones del entorno.
@@ -61,6 +66,13 @@ git clone https://github.com/CarlosAndres12/docker-student-ide.git
 cd docker-student-ide
 ./start.sh                    # macOS / Linux
 # .\start.ps1                 # Windows (PowerShell, con Docker)
+```
+
+En Windows nativo (sin Docker), si clonaste a mano y tu terminal bloquea scripts:
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+.\setup-windows.ps1
 ```
 
 O si ya tienes Docker y no quieres usar los scripts:

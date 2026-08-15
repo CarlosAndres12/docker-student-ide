@@ -135,8 +135,18 @@ Compose daemon, `.env`) do not apply.
 | N-04 | Pester | Antigravity CLI install command shape. | Uses `irm https://antigravity.google/cli/install.ps1 | iex` and never the npm placeholder. |
 | N-05 | Pester | VS Code user settings merge. | Creates the file, preserves existing keys, and stays idempotent. |
 | N-06 | Pester | The VS Code extension harness. | The marketplace set includes pylance and docker (unavailable on code-server). |
+| N-07 | Pester | Version gating for Node and Python. | `Get-NodeMajorVersion` parses the installed major (0 when absent); `Resolve-PythonLauncher` resolves `py -3.13` or returns null. |
 | N-10 | Native Windows | A disposable Windows 11 fixture runs `setup-windows.ps1`. | Git, Node, Python, and VS Code are installed; the `.venv` and extension set are present. |
 | N-11 | Native Windows | The native runtime is verified end-to-end. | Python stack imports, agent binaries respond, and VS Code opens the workspace. |
+
+The native one-liner (`scripts/install-native.ps1`) has its own bootstrap
+scenarios, mirroring the Docker installer's I-01..I-03:
+
+| ID | Layer | Scenario | Required evidence |
+|---|---|---|---|
+| NI-01 | Pester | The bootstrap downloads the repo ZIP and runs `setup-windows.ps1`. | ZIP URL fetched, child `powershell.exe -NoProfile -ExecutionPolicy Bypass -File` invoked with `setup-windows.ps1`. |
+| NI-02 | Pester | `setup-windows.ps1` already exists in the working directory. | No download occurs; the child is invoked directly with bypass. |
+| NI-03 | Pester | The ZIP download fails. | Actionable, nonzero failure without a partial install. |
 
 N-10/N-11 are pending until a disposable native-Windows fixture exists; pending
 tests are not coverage claims.

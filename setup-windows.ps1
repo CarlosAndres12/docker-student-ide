@@ -215,6 +215,46 @@ function Merge-JsonSettings {
     $settings | ConvertTo-Json -Depth 10 | Set-Content -Path $Path -Encoding UTF8
 }
 
+# -- Helper: major version of the installed Node.js (0 when absent/broken) ----
+function Get-NodeMajorVersion {
+    $node = Get-Command node -ErrorAction SilentlyContinue
+    if (-not $node) {
+        return 0
+    }
+    $output = & node --version 2>&1
+    $version = ($output -join '')
+    if ($version -match 'v?(\d+)') {
+        return [int]$Matches[1]
+    }
+    return 0
+}
+
+# -- Helper: resolve a Python launcher capable of creating the 3.13 venv ------
+# Returns a hashtable @{ Command; Args } or $null when no Python 3.13 is found.
+# Prefers the `py` launcher so a stale `python` on PATH cannot leak in.
+function Resolve-PythonLauncher {
+    $py = Get-Command py -ErrorAction SilentlyContinue
+    if ($py) {
+        & py -3.13 --version 2>&1 | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            return @{ Command = $py.Source; Args = @("-3.13") }
+        }
+    }
+    $python = Get-Command python -ErrorAction SilentlyContinue
+    if ($python) {
+        $output = & python --version 2>&1
+        $version = ($output -join '')
+        if ($version -match 'Python (\d+)\.(\d+)') {
+            $major = [int]$Matches[1]
+            $minor = [int]$Matches[2]
+            if ($major -gt 3 -or ($major -eq 3 -and $minor -ge 13)) {
+                return @{ Command = $python.Source; Args = @() }
+            }
+        }
+    }
+    return $null
+}
+
 function Invoke-Setup {
     param()
 
@@ -253,10 +293,16 @@ if (Get-Command git -ErrorAction SilentlyContinue) {
     }
 }
 
-# -- Section 2: Node.js LTS ---------------------------------------------------
-if (Get-Command node -ErrorAction SilentlyContinue) {
+# -- Section 2: Node.js LTS (>= 22) ------------------------------------------
+# pi-coding-agent requires Node >= 22.19.0; a stale Node on the student PC must
+# be upgraded rather than silently reused.
+$nodeMajor = Get-NodeMajorVersion
+if ($nodeMajor -ge 22) {
     Write-Message "[OK] Node.js ya esta instalado." "Node.js already installed."
 } else {
+    if ($nodeMajor -gt 0) {
+        Write-Message "Node.js $nodeMajor detectado (se requiere 22+). Instalando LTS..." "Node.js $nodeMajor detected (22+ required). Installing LTS..."
+    }
     $code = Invoke-WingetInstall -Id "OpenJS.NodeJS.LTS" -DisplayName "Node.js LTS"
     if ($code -ne 0) {
         Write-Message "No se pudo instalar Node.js." "Could not auto-install Node.js."
@@ -264,17 +310,17 @@ if (Get-Command node -ErrorAction SilentlyContinue) {
         Exit-WithPause -Code 1
     }
     Reset-PathFromRegistry
-    if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
-        Write-Message "Node.js instalado pero no se detecta en el PATH." "Node.js installed but not on PATH."
-        Write-Host "   Reinicia la terminal y vuelve a ejecutar este script."
-        Write-Host "   Restart the terminal and run this script again."
+    if ((Get-NodeMajorVersion) -lt 22) {
+        Write-Message "Node.js sigue por debajo de 22 tras la instalacion." "Node.js is still below 22 after install."
+        Write-Host "   Instala manualmente: https://nodejs.org/"
+        Write-Host "   Install manually: https://nodejs.org/"
         Exit-WithPause -Code 1
     }
 }
 
-# -- Section 3: Python (latest) + virtual environment -------------------------
-$pythonCmd = Get-Command python -ErrorAction SilentlyContinue
-if (-not $pythonCmd) {
+# -- Section 3: Python (>= 3.13) + virtual environment ------------------------
+$launcher = Resolve-PythonLauncher
+if (-not $launcher) {
     $code = Invoke-WingetInstall -Id "Python.Python.3.13" -DisplayName "Python"
     if ($code -ne 0) {
         Write-Message "No se pudo instalar Python." "Could not auto-install Python."
@@ -282,16 +328,12 @@ if (-not $pythonCmd) {
         Exit-WithPause -Code 1
     }
     Reset-PathFromRegistry
-    $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
-    if (-not $pythonCmd) {
-        # Fall back to the `py` launcher which winget installs alongside python.
-        $pythonCmd = Get-Command py -ErrorAction SilentlyContinue
-        if (-not $pythonCmd) {
-            Write-Message "Python instalado pero no se detecta en el PATH." "Python installed but not on PATH."
-            Write-Host "   Reinicia la terminal y vuelve a ejecutar este script."
-            Write-Host "   Restart the terminal and run this script again."
-            Exit-WithPause -Code 1
-        }
+    $launcher = Resolve-PythonLauncher
+    if (-not $launcher) {
+        Write-Message "Python 3.13 instalado pero no se detecta en el PATH." "Python 3.13 installed but not on PATH."
+        Write-Host "   Reinicia la terminal y vuelve a ejecutar este script."
+        Write-Host "   Restart the terminal and run this script again."
+        Exit-WithPause -Code 1
     }
 }
 
@@ -301,11 +343,7 @@ if (Test-Path $venvPython) {
     Write-Message "[OK] Entorno virtual Python ya existe (.venv)." "Python virtual environment already exists (.venv)."
 } else {
     Write-Message "Creando entorno virtual Python (.venv)..." "Creating Python virtual environment (.venv)..."
-    if ($pythonCmd.Name -eq "py") {
-        & $pythonCmd.Source -3.13 -m venv $venvPath
-    } else {
-        & $pythonCmd.Source -m venv $venvPath
-    }
+    & $launcher.Command @($launcher.Args) -m venv $venvPath
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path $venvPython)) {
         Write-Message "No se pudo crear el entorno virtual." "Could not create the virtual environment."
         Exit-WithPause -Code 1

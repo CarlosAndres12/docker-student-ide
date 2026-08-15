@@ -6,6 +6,32 @@ no code-server — while keeping parity with what the Docker image provides.
 
 `start.ps1` remains the Docker path and is unchanged.
 
+## One-liner bootstrap
+
+The student-facing entry point is a single command, run from the folder where
+the workspace should live:
+
+```powershell
+irm https://raw.githubusercontent.com/CarlosAndres12/docker-student-ide/main/scripts/install-native.ps1 | iex
+```
+
+`scripts/install-native.ps1` is the bootstrap. It is **Git-free and
+policy-free**:
+
+- Runs in-memory via `irm | iex`, so a `Restricted` execution policy cannot
+  block it and no `.ps1` file is saved.
+- Forces TLS 1.2 (PowerShell 5.1 on older Windows 10).
+- Downloads the repository as a **ZIP**
+  (`.../archive/refs/heads/main.zip`) instead of `git clone`, so Git is not
+  required to start.
+- Extracts to `./docker-student-ide` and runs `setup-windows.ps1` in a child
+  `powershell.exe -NoProfile -ExecutionPolicy Bypass -File` process (child-scoped
+  bypass).
+- Is idempotent: if `setup-windows.ps1` is already present it skips the download.
+
+Git is installed later by `setup-windows.ps1` itself (step 2 below), before
+anything that depends on it (pi-free uses `git clone`).
+
 ## Runtime model
 
 | Concern | Docker container | Native Windows |
@@ -22,19 +48,24 @@ no code-server — while keeping parity with what the Docker image provides.
 ## Provisioning order
 
 1. **Gate** — winget presence + elevation guidance.
-2. **Git** — `winget Git.Git`.
-3. **Node.js LTS** — `winget OpenJS.NodeJS.LTS`.
-4. **Python** — `winget Python.Python.3.13`, then a `.venv` with the CPU
-   PyTorch wheels and `requirements-windows.txt`.
-5. **Global npm tools** — `create-vite@5.1.0`, `typescript@5.6.2`,
+2. **Git** — `winget Git.Git` (installed first so pi-free and other
+   git-dependent packages work).
+3. **Node.js LTS (≥ 22)** — `Get-NodeMajorVersion` gates on major ≥ 22;
+   otherwise `winget OpenJS.NodeJS.LTS` and re-check.
+4. **Python (≥ 3.13)** — `Resolve-PythonLauncher` prefers `py -3.13`, then
+   `python --version ≥ 3.13`; otherwise `winget Python.Python.3.13`. The venv
+   is created with the resolved launcher so a stale `python` on PATH cannot
+   leak in.
+5. **`.venv` + ML/DL stack** — CPU PyTorch wheels then `requirements-windows.txt`.
+6. **Global npm tools** — `create-vite@5.1.0`, `typescript@5.6.2`,
    `npm-check-updates@17.1.3` (pinned, same as the Dockerfile).
-6. **AI agents** — Pi, OpenCode, Freebuff, pi-free, engram, gentle-ai, Qoder,
+7. **AI agents** — Pi, OpenCode, Freebuff, pi-free, engram, gentle-ai, Qoder,
    Antigravity CLI.
-7. **VS Code** — `winget Microsoft.VisualStudioCode` + 16 extensions + terminal
+8. **VS Code** — `winget Microsoft.VisualStudioCode` + 16 extensions + terminal
    keybinding settings.
-8. **Pi free-only** — `PI_FREE_ONLY=1` (user env) + `~/.pi/free.json`.
-9. **Launch** VS Code on `student_workspace/`.
-10. **Verification** — version report for every installed tool.
+9. **Pi free-only** — `PI_FREE_ONLY=1` (user env) + `~/.pi/free.json`.
+10. **Launch** VS Code on `student_workspace/`.
+11. **Verification** — version report for every installed tool.
 
 The core toolchain (Git, Node, Python, VS Code) fails hard on error; agent
 installs are best-effort and only warn. Everything is idempotent.
@@ -65,6 +96,10 @@ here after a fresh provision (the script prints them at the end of each run).
 
 ## Key decisions and gotchas
 
+- **Version gating, not just presence.** `Get-NodeMajorVersion` (≥ 22, required
+  by pi-coding-agent) and `Resolve-PythonLauncher` (≥ 3.13) guard against a
+  stale Node/Python already on the student PC. The Python venv is created with
+  `py -3.13` when available, so an old `python` on PATH cannot leak in.
 - **Python is latest (3.13), not 3.11.** The Docker image stays on 3.11 with
   `requirements.txt`; several 2024-era pins there have no cp313 wheels, so the
   native path uses `requirements-windows.txt`. Do not merge the two files.
@@ -83,12 +118,20 @@ here after a fresh provision (the script prints them at the end of each run).
   contents are `engram.exe` / `gentle-ai.exe`; they are extracted into
   `%LOCALAPPDATA%\docker-student-ide\bin` and that directory is added to the
   User `PATH` persistently.
-- **`irm ... | iex`** is used only for the two official installers (Qoder,
-  Antigravity), matching each vendor's documented command.
+- **`irm ... | iex`** is used only for the official installers (Qoder,
+  Antigravity, and the bootstrap), matching each vendor's documented command.
 
 ## Verification
 
-The deterministic unit suite (`tests/windows/unit/Native.Tests.ps1`, scenarios
-N-02..N-06 plus the "Native Windows setup contracts" block) runs under pwsh on
-Linux via `scripts/windows-testing/run-pester.sh`. Native provisioning itself
-is a disposable-Windows integration concern (`N-10`/`N-11`, pending).
+The deterministic unit suite runs under pwsh on Linux via
+`scripts/windows-testing/run-pester.sh`:
+
+- `tests/windows/unit/InstallNative.Tests.ps1` — NI-01..NI-03 (ZIP download →
+  child bypass, already-in-repo, download failure).
+- `tests/windows/unit/Native.Tests.ps1` — N-02..N-07 (winget gate, npm installs,
+  Antigravity, settings merge, extension harness, version gating).
+- `tests/windows/unit/Bootstrap.Contracts.Tests.ps1` — native setup and
+  installer contracts.
+
+Native provisioning itself is a disposable-Windows integration concern
+(`N-10`/`N-11`, pending).
