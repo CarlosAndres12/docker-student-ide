@@ -348,7 +348,7 @@ secret values in source or example commands.
 - [x] Define the initial test tree, scenario IDs, timeouts, artifact retention, and failure classes.
 - [x] Add static Pester contracts for bootstrap entry points and required command shapes.
 - [x] Define noninteractive behavior for `Exit-WithPause` before remote automation is enabled.
-- [ ] Add machine-readable result output and classify infrastructure failures separately from SUT failures.
+- [x] Add machine-readable result output and classify infrastructure failures separately from SUT failures (`result.json` verdict/failure-class plus `scenarios.json` per-scenario summary in the VM runner).
 
 **Exit condition:** static checks fail deterministically and distinguish missing
 tooling from a failed SUT assertion.
@@ -390,7 +390,7 @@ not only PowerShell syntax or the external VM's guest runtime.
 
 ### Phase 4: CI and ongoing maintenance
 
-- [ ] Add the mocked `windows-latest` job and Linux static gate.
+- [x] Add the mocked `windows-latest` job and Linux static gate (`.github/workflows/ci.yml`).
 - [ ] Add a protected self-hosted integration job only after its isolation and cleanup controls are reviewed.
 - [ ] Add scheduled external-VM runtime proof with baseline versioning and artifact retention.
 - [ ] Review the matrix when Windows, WSL2, Docker Desktop, Compose, or bootstrap behavior changes.

@@ -47,7 +47,10 @@ pending the prepared-runtime baseline).
    `scripts/windows-testing/run-pester.sh`.
 3. Run the same suite on real Windows through the VM fixture:
    `scripts/windows-testing/vm-run.sh`. Results land in
-   `/home/carlos/windows-vm/results/<run-id>/`.
+   `/home/carlos/windows-vm/results/<run-id>/` as `run-meta.json` (guest
+   identity), `windows-unit.xml` (JUnit), `scenarios.json` (per-scenario
+   summary), and `result.json` (run verdict plus failure class:
+   `snapshot|timeout|ssh|sut|assertion|environment|none`).
 4. Use the support helpers under `tests/windows/support/` for temporary workspaces, command fakes, and child-process results.
 5. Extract remaining side-effecting bootstrap operations behind testable functions before expanding mocked unit coverage.
 6. Replace pending unit scenarios with deterministic tests; pending native/VM scenarios are not coverage claims.
