@@ -82,7 +82,7 @@ STAGE="$SHARED_DIR/windows-testing/$RUNID"
 mkdir -p "$STAGE"
 git -C "$ROOT" archive "$REVISION" | tar -x -C "$STAGE"
 cat > "$STAGE/run.ps1" <<EOF
-\$ErrorActionPreference = 'Stop'
+\$ErrorActionPreference = 'Continue'
 \$repoRoot = 'Z:\windows-testing\\$RUNID'
 New-Item -ItemType Directory -Path (Join-Path \$repoRoot 'results') -Force | Out-Null
 \$meta = [pscustomobject]@{

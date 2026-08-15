@@ -2,6 +2,7 @@ BeforeAll {
     $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..")).Path
     $startScript = Join-Path $repositoryRoot "start.ps1"
     $windowsHost = [System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Win32NT
+    $originalMachinePath = [Environment]::GetEnvironmentVariable("Path", "Machine")
     . (Join-Path $repositoryRoot "tests/windows/support/TestWorkspace.ps1")
     . (Join-Path $repositoryRoot "tests/windows/support/CommandFake.ps1")
     . (Join-Path $repositoryRoot "tests/windows/support/Invoke-BootstrapScenario.ps1")
@@ -28,6 +29,7 @@ BeforeAll {
             TEST_WORKSPACE = $Workspace
             APPDATA = (Join-Path $Workspace "appdata")
             FAKE_DIR = $Fakes
+            ORIGINAL_MACHINE_PATH = $originalMachinePath
         }
         foreach ($key in $ExtraEnvironment.Keys) {
             $environment[$key] = $ExtraEnvironment[$key]
