@@ -77,6 +77,11 @@ Describe "S-03 Docker CLI installation" -Tag Unit {
             $null = New-CommandFake -Name "winget" -Directory $fakes -LogPath $wingetLog -ExitCode 0
 
             $result = Invoke-StartScenario -Workspace $ws.Path -Fakes $fakes -DriverBody @(
+                'function Get-Command {'
+                '    param([string]$Name, [string]$ErrorAction)'
+                '    if ($Name -eq "docker") { return $null }'
+                '    Microsoft.PowerShell.Core\Get-Command @PSBoundParameters'
+                '}'
                 'Set-Location $env:TEST_WORKSPACE'
                 '$code = Invoke-StartBootstrap'
                 'exit $code'
@@ -102,7 +107,7 @@ Describe "S-03 Docker CLI installation" -Tag Unit {
             $result = Invoke-StartScenario -Workspace $ws.Path -Fakes $fakes -DriverBody @(
                 'function Get-Command {'
                 '    param([string]$Name, [string]$ErrorAction)'
-                '    if ($Name -eq "winget") { return $null }'
+                '    if ($Name -eq "winget" -or $Name -eq "docker") { return $null }'
                 '    Microsoft.PowerShell.Core\Get-Command @PSBoundParameters'
                 '}'
                 'Set-Location $env:TEST_WORKSPACE'
@@ -128,7 +133,7 @@ Describe "S-03 Docker CLI installation" -Tag Unit {
             $result = Invoke-StartScenario -Workspace $ws.Path -Fakes $fakes -DriverBody @(
                 'function Get-Command {'
                 '    param([string]$Name, [string]$ErrorAction)'
-                '    if ($Name -eq "winget" -or $Name -eq "choco") { return $null }'
+                '    if ($Name -eq "winget" -or $Name -eq "choco" -or $Name -eq "docker") { return $null }'
                 '    Microsoft.PowerShell.Core\Get-Command @PSBoundParameters'
                 '}'
                 'Set-Location $env:TEST_WORKSPACE'
