@@ -104,6 +104,11 @@ Describe "I-03 missing Git" -Tag Unit {
             $null = New-CommandFake -Name "winget" -Directory $fakes -LogPath $wingetLog -ExitCode 1
 
             $result = Invoke-InstallerScenario -Workspace $ws.Path -Fakes $fakes -DriverBody @(
+                'function Get-Command {'
+                '    param([string]$Name, [string]$ErrorAction)'
+                '    if ($Name -eq "git") { return $null }'
+                '    Microsoft.PowerShell.Core\Get-Command @PSBoundParameters'
+                '}'
                 'Set-Location $env:TEST_WORKSPACE'
                 '$code = Invoke-Installer'
                 'exit $code'
@@ -125,6 +130,11 @@ Describe "I-03 missing Git" -Tag Unit {
             $null = New-CommandFake -Name "winget" -Directory $fakes -LogPath $wingetLog -ExitCode 0
 
             $result = Invoke-InstallerScenario -Workspace $ws.Path -Fakes $fakes -DriverBody @(
+                'function Get-Command {'
+                '    param([string]$Name, [string]$ErrorAction)'
+                '    if ($Name -eq "git") { return $null }'
+                '    Microsoft.PowerShell.Core\Get-Command @PSBoundParameters'
+                '}'
                 'Set-Location $env:TEST_WORKSPACE'
                 '$code = Invoke-Installer'
                 'exit $code'
