@@ -6,7 +6,9 @@ BeforeAll {
 
 Describe "I-04 restricted execution policy" -Tag NativeWindows {
     It "runs the staged installer under a restricted policy via the one-liner path" {
-        $ws = New-BootstrapTestWorkspace
+        # The repository fixture provides docker-compose.yml so the installer
+        # takes the already-in-repository path instead of cloning.
+        $ws = New-BootstrapTestWorkspace -Repository
         try {
             # Staged copy of the installer so the flow does not depend on the
             # network one-liner.
