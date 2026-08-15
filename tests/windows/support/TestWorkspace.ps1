@@ -11,6 +11,6 @@ function New-BootstrapTestWorkspace {
 
     [pscustomobject]@{
         Path = $path
-        Cleanup = { Remove-Item -Path $path -Recurse -Force -ErrorAction SilentlyContinue }
+        Cleanup = { Remove-Item -Path $path -Recurse -Force -ErrorAction SilentlyContinue }.GetNewClosure()
     }
 }
