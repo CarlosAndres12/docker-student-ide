@@ -29,12 +29,16 @@ deleted.
 - `bash -n` and `docker compose config` prove only Linux-visible contracts.
 - Pester contract tests prove source-level invariants when run with Pester 5.
 - The Docker runner proves the PowerShell code parses and unit seams behave.
-- `vm-run.sh` proves the scripts parse and the unit seams behave under Windows
-  PowerShell 5.1 on the Windows 11 fixture. It does not yet prove winget, WSL,
-  or Docker Desktop behavior.
+- `vm-run.sh` proves the scripts parse, the unit seams behave, and the
+  execution-policy bypass works under Windows PowerShell 5.1 on the Windows
+  11 fixture. It does not yet prove winget, WSL, or Docker Desktop behavior.
 - SSH proves transport and guest control, not native Windows bootstrap behavior.
 - Native Windows + WSL2 + Docker Desktop tests are required for platform claims.
 - VM, SSH, snapshot, and timeout failures are infrastructure failures.
+
+Current evidence: container 28/28 passed; VM 28 passed, 4 skipped (I-03
+clone-continuation skipped on Windows by design; S-02, R-01, R-02 still
+pending the prepared-runtime baseline).
 
 ## Phase Order
 
@@ -61,6 +65,13 @@ start the VM storage directory without an overlay: dockurr would create a new
 blank disk and reinstall Windows. The base image is read-only and must not be
 booted directly; maintenance changes go through a temporary overlay followed
 by `qemu-img commit`.
+
+The base image carries a real Git 2.55 installation from earlier provisioning.
+Scenario tests must enforce their premises explicitly (PATH fakes plus
+Get-Command shadows) instead of relying on fixture contents. On Windows, the
+drivers replace the machine registry PATH with the original snapshot plus the
+fake directory so the bootstrap refresh keeps the fakes ahead of System32;
+the overlay is disposable, so the mutation is intentionally not restored.
 
 Windows drive mappings are per-logon-session, so `Z:` must be mapped with
 `net use` inside the same SSH session that runs the suite. The suite must run

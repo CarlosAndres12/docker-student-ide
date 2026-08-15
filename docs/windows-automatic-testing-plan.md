@@ -13,7 +13,8 @@ CI remain future phases.
 | Windows tests | A tracked static-contract Pester suite exists; there is no native Windows harness or Windows CI runner. | Contract tests are implemented; mocked side-effect tests, native integration, and CI remain future work. |
 | External fixture | A live `dockur/windows` VM exists at `/home/carlos/windows-vm`. It runs Windows 11 (10.0.26200) with 8 GB RAM, 4 vCPU, and a disposable qcow2 overlay over an immutable base image. | Use it for controlled runtime proof, not as an implicit repository dependency. |
 | VM control plane | The host `/shared` bind mount appears as `Z:` in the interactive guest session. OpenSSH is installed and verified; a dedicated runner key authenticates over `127.0.0.1:2222`. | The host can stage files and run noninteractive guest commands over SSH; SSH sessions map `Z:` per session via `net use`. |
-| Real-Windows run | The Pester suite runs on the VM under Windows PowerShell 5.1 (`scripts/windows-testing/vm-run.sh`): 12 passed, 0 failed, 8 pending. | This proves the bootstrap scripts parse and the unit seams behave on real Windows. It does not prove winget, WSL, or Docker Desktop behavior. |
+| Real-Windows run | The Pester suite runs on the VM under Windows PowerShell 5.1 (`scripts/windows-testing/vm-run.sh`): 28 passed, 0 failed, 4 skipped (1 fixture-dependent skip, 3 pending runtime scenarios). | This proves the bootstrap scripts parse, the unit seams behave, and the execution-policy bypass seam works on real Windows. It does not prove winget, WSL, or Docker Desktop behavior. |
+| Fixture state | The base image carries a real Git 2.55 installation from earlier provisioning; scenarios that need Git absent enforce the premise with function shadows. | Tests must not depend on fixture contents; enforce premises explicitly. |
 
 ### Current implementation boundary
 
@@ -357,12 +358,15 @@ tooling from a failed SUT assertion.
 - [x] Create the Windows test tree and Pester configuration.
 - [x] Add disposable workspace, command-fake, and child-process scenario helpers.
 - [x] Add per-use-case unit and native/VM test skeletons with explicit tags.
-- [ ] Extract side-effecting bootstrap operations behind testable functions or adapters.
-- [ ] Add mocks and tests for install cloning, execution-policy bypass, package-manager fallback, WSL branches, Docker readiness, Compose detection, `.env` idempotence, and argument forwarding.
-- [ ] Add bounded waits and output redaction assertions.
+- [x] Extract side-effecting bootstrap operations behind testable functions or adapters (child-process drivers, PATH fakes, function shadows; the bootstrap scripts themselves needed only the argument-forwarding and exit-code fixes).
+- [x] Add mocks and tests for install cloning, execution-policy bypass, package-manager fallback, WSL branches, Docker readiness, Compose detection, `.env` idempotence, and argument forwarding.
+- [x] Add bounded waits and output redaction assertions (S-04 probe bounds, I-04 no-secret check).
 
 **Exit condition:** all I-01 through I-03 and S-01 through S-06 run without
-installing software or mutating a real Windows machine.
+installing software or mutating a real Windows machine. I-03's
+clone-continuation case runs on Linux hosts and is skipped on Windows
+hosts because the bootstrap rebuilds PATH from the registry; live winget
+coverage belongs to the disposable-VM layer.
 
 ### Phase 2: VM control and recovery
 
@@ -376,8 +380,9 @@ baseline and produces classified diagnostics.
 
 ### Phase 3: Native Windows integration
 
+- [x] Run I-04 against a real restricted execution policy on the VM fixture (negative control proves the stub is blocked; the positive proves the child bypass seam executes it).
 - [ ] Prepare a disposable Windows 11 fixture with WSL2 and Docker Desktop.
-- [ ] Run I-04, S-02, S-05, and R-01/R-02 against real platform dependencies.
+- [ ] Run S-02, S-05, and R-01/R-02 against real platform dependencies.
 - [ ] Include reboot and first-run state transitions where the bootstrap scripts require them.
 
 **Exit condition:** the suite proves native Windows + WSL2 + Docker Desktop,
