@@ -53,8 +53,10 @@ function Wait-DockerDaemon {
     )
 
     for ($retryCount = 0; $retryCount -lt $MaxRetries; $retryCount++) {
-        $LASTEXITCODE = 1
-        $null = docker info 2>&1
+        # Global scope: assigning $LASTEXITCODE locally would shadow the
+        # automatic variable and hide the real native exit code.
+        $global:LASTEXITCODE = 1
+        $probeOutput = docker info 2>&1
         if ($LASTEXITCODE -eq 0) {
             return $true
         }
@@ -70,10 +72,19 @@ function Wait-DockerDaemon {
     return $false
 }
 
+# -- Helper: refresh PATH from the Windows registry --------------------------
+# Registry-backed PATH refresh is Windows-only. On other platforms there is
+# no registry to read, and building $env:Path from empty entries corrupts
+# command resolution and native exit codes inside the caller's scope.
+function Reset-PathFromRegistry {
+    if ([System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Win32NT) {
+        $env:Path = @([Environment]::GetEnvironmentVariable('Path','Machine'), [Environment]::GetEnvironmentVariable('Path','User')) -join ';'
+    }
+}
+
 function Update-EnvVar {
     param([string]$VarName, [string]$Value, [string]$FilePath)
     $line = "${VarName}=${Value}"
-
     if (Test-Path $FilePath) {
         $content = Get-Content -Path $FilePath -Raw
         if ($content -match "(?m)^${VarName}=.*") {
@@ -102,18 +113,19 @@ function Update-EnvVar {
 function Invoke-StartBootstrap {
     param(
         [int]$MaxRetries = 60,
-        [int]$SleepSeconds = 5
+        [int]$SleepSeconds = 5,
+        [string[]]$ArgsList = @()
     )
 
 # -- Refresh PATH from registry (Machine + User) ------------------------------
 # Picks up Docker Desktop / WSL installed this session without requiring a
 # terminal restart. Machine-first mirrors the Windows environment order.
-$env:Path = @([Environment]::GetEnvironmentVariable('Path','Machine'), [Environment]::GetEnvironmentVariable('Path','User')) -join ';'
+Reset-PathFromRegistry
 
 # -- Section 0: Check WSL (Windows only -- Docker Desktop requires WSL 2) --------
 $wslCmd = Get-Command "wsl" -ErrorAction SilentlyContinue
 if ($wslCmd) {
-    $null = wsl --status 2>&1
+    $wslOutput = wsl --status 2>&1
     if ($LASTEXITCODE -ne 0) {
         Write-Message "WSL no esta instalado o no funciona. Docker Desktop lo necesita en Windows." "WSL is not installed or not functional. Docker Desktop requires it on Windows."
 
@@ -241,7 +253,7 @@ if ($dockerPath) {
 
     # winget/choco installs set the Machine PATH -- refresh the session so the
     # Docker CLI just installed becomes visible without a terminal restart.
-    $env:Path = @([Environment]::GetEnvironmentVariable('Path','Machine'), [Environment]::GetEnvironmentVariable('Path','User')) -join ';'
+    Reset-PathFromRegistry
 
     # Guard: a missing CLI is a fix-it problem, not a wait problem. If the CLI
     # is still absent after install + refresh, stop instead of polling forever.
@@ -273,8 +285,8 @@ if (Test-Path $dockerDesktopPath) {
 }
 
 # Quick check: is Docker already running?
-$LASTEXITCODE = 1   # reset stale exit code so a missed CLI cannot short-circuit
-$null = docker info 2>&1
+$global:LASTEXITCODE = 1   # reset stale exit code so a missed CLI cannot short-circuit
+$dockerOutput = docker info 2>&1
 if ($LASTEXITCODE -eq 0) {
     Write-Message "[OK] Docker ya esta corriendo." "Docker already running."
 } else {
@@ -355,8 +367,8 @@ Write-Host "    Access the IDE at: http://localhost:8443"
 Write-Host ""
 
 # Pass through any arguments
-if ($args.Count -gt 0) {
-    & docker compose up @args
+if ($ArgsList.Count -gt 0) {
+    & docker compose up @ArgsList
 } else {
     & docker compose up
 }
@@ -369,5 +381,5 @@ Exit-WithPause -Code $exitCode
 }
 
 if ($MyInvocation.InvocationName -ne '.') {
-    exit (Invoke-StartBootstrap)
+    exit (Invoke-StartBootstrap -ArgsList $args)
 }

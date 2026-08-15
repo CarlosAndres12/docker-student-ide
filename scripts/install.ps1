@@ -30,6 +30,16 @@ function Exit-WithPause {
     exit $Code
 }
 
+# -- Helper: refresh PATH from the Windows registry --------------------------
+# Registry-backed PATH refresh is Windows-only. On other platforms there is
+# no registry to read, and building $env:Path from empty entries corrupts
+# command resolution and native exit codes inside the caller's scope.
+function Reset-PathFromRegistry {
+    if ([System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Win32NT) {
+        $env:Path = @([Environment]::GetEnvironmentVariable('Path','Machine'), [Environment]::GetEnvironmentVariable('Path','User')) -join ';'
+    }
+}
+
 $repoUrl = "https://github.com/CarlosAndres12/docker-student-ide.git"
 $repoDir = "docker-student-ide"
 
@@ -49,13 +59,13 @@ function Invoke-Installer {
 
 # -- Refresh PATH from registry (Machine + User) ------------------------------
 # Picks up git / Docker installed this session without restarting the terminal.
-$env:Path = @([Environment]::GetEnvironmentVariable('Path','Machine'), [Environment]::GetEnvironmentVariable('Path','User')) -join ';'
+Reset-PathFromRegistry
 
 # -- Check for git -----------------------------------------------------------
 if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
     Write-Host "[!] Git no esta instalado. Instalandolo con winget..."
     Write-Host "   Git is not installed. Installing it with winget..."
-    $null = winget install -e --id Git.Git --accept-source-agreements --accept-package-agreements 2>&1
+    $wingetOutput = winget install -e --id Git.Git --accept-source-agreements --accept-package-agreements 2>&1
     if ($LASTEXITCODE -ne 0) {
         Write-Host ""
         Write-Host "[!] No se pudo instalar Git automaticamente. Instalalo manualmente:"
@@ -66,7 +76,7 @@ if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
         Exit-WithPause -Code 1
     }
     # Git.Git sets the Machine PATH -- refresh the session so cloning can proceed.
-    $env:Path = @([Environment]::GetEnvironmentVariable('Path','Machine'), [Environment]::GetEnvironmentVariable('Path','User')) -join ';'
+    Reset-PathFromRegistry
     if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
         Write-Host ""
         Write-Host "[!] Git se instalo pero no se detecta en el PATH. Reinicia la terminal o instalalo manualmente:"
@@ -110,7 +120,7 @@ Write-Host "[*] Cloning docker-student-ide..."
 if (Test-Path $repoDir) {
     Write-Host "[*] Directory $repoDir already exists. Using existing clone."
 } else {
-    $null = git clone $repoUrl $repoDir 2>&1
+    $cloneOutput = git clone $repoUrl $repoDir 2>&1
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Error: Failed to clone repository. Check your internet connection."
         Exit-WithPause -Code 1
