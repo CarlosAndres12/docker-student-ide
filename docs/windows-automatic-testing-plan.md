@@ -259,6 +259,13 @@ scripts/windows-testing/vm-run.sh            # full run lifecycle
 scripts/windows-testing/snapshot.sh delete   # discard the overlay
 ```
 
+The baseline is selected with `WINDOWS_BASELINE` (default `clean-bootstrap`)
+or `vm-run.sh --baseline <name>`. Both the `snapshot.sh` and `vm-run.sh`
+adapters map `clean-bootstrap` to `base.qcow2` and `prepared-runtime` to
+`prepared-runtime.qcow2` in the base directory; the disposable overlay keeps
+the fixed `data.qcow2` name dockurr boots from, with its backing file pointing
+at the selected baseline.
+
 The adapter validates paths and VM state before it allows tests to continue.
 Never start the VM storage directory without an overlay: dockurr would create
 a new blank disk and reinstall Windows.

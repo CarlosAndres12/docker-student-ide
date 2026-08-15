@@ -13,16 +13,18 @@
 #
 # Overridable environment:
 #   WINDOWS_VM_DIR       VM storage directory (default /home/carlos/windows-vm)
+#   WINDOWS_BASELINE     baseline name (default clean-bootstrap)
 #   WINDOWS_SSH_KEY      SSH private key (default $WINDOWS_VM_DIR/.ssh/runner)
 #   WINDOWS_SSH_USER     guest user (default Docker)
 #   WINDOWS_SSH_HOST     guest endpoint (default 127.0.0.1)
 #   WINDOWS_SSH_PORT     guest SSH port (default 2222)
 #
 # Usage:
-#   scripts/windows-testing/vm-run.sh [--keep]
+#   scripts/windows-testing/vm-run.sh [--keep] [--baseline clean-bootstrap|prepared-runtime]
 #
 #   --keep keeps the overlay after the run for inspection; by default the
 #   overlay is deleted so the fixture always returns to the clean base.
+#   --baseline selects the base image the disposable overlay is backed by.
 #
 # Results land under $WINDOWS_VM_DIR/results/<run-id>/ (outside Git):
 #   run-meta.json    guest engine/OS identity
@@ -37,7 +39,6 @@ set -eu
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)"
 VM_DIR="${WINDOWS_VM_DIR:-/home/carlos/windows-vm}"
 BASE_DIR="${WINDOWS_BASE_DIR:-/home/carlos/windows-snapshots/base}"
-BASE_IMAGE="$BASE_DIR/base.qcow2"
 SSH_KEY="${WINDOWS_SSH_KEY:-$VM_DIR/.ssh/runner}"
 SSH_USER="${WINDOWS_SSH_USER:-Docker}"
 SSH_HOST="${WINDOWS_SSH_HOST:-127.0.0.1}"
@@ -47,10 +48,34 @@ RESULTS_DIR="$VM_DIR/results"
 SNAP="$ROOT/scripts/windows-testing/snapshot.sh"
 COMPOSE_FILE="$VM_DIR/docker-compose.yml"
 
-KEEP_OVERLAY=0
-[ "${1:-}" = "--keep" ] && KEEP_OVERLAY=1
-
 die() { echo "vm-run.sh: $*" >&2; exit 1; }
+
+KEEP_OVERLAY=0
+BASELINE="${WINDOWS_BASELINE:-clean-bootstrap}"
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --keep) KEEP_OVERLAY=1 ;;
+        --baseline)
+            [ $# -ge 2 ] || die "missing value for --baseline"
+            BASELINE="$2"
+            shift
+            ;;
+        --baseline=*) BASELINE="${1#--baseline=}" ;;
+        *) die "unknown argument: $1 (expected --keep or --baseline=<name>)" ;;
+    esac
+    shift
+done
+
+case "$BASELINE" in
+    clean-bootstrap)  BASE_NAME="base" ;;
+    prepared-runtime) BASE_NAME="prepared-runtime" ;;
+    *) die "unknown baseline: $BASELINE (expected clean-bootstrap or prepared-runtime)" ;;
+esac
+BASE_IMAGE="$BASE_DIR/$BASE_NAME.qcow2"
+
+# snapshot.sh reads the baseline from the environment.
+export WINDOWS_BASELINE="$BASELINE"
+
 [ -f "$SSH_KEY" ] || die "runner SSH key not found: $SSH_KEY"
 
 ssh_cmd() {
@@ -64,7 +89,6 @@ ssh_cmd() {
 
 RUNID="run-$(date -u +%Y%m%dT%H%M%SZ)"
 REVISION="$(git -C "$ROOT" rev-parse HEAD)"
-BASELINE="clean-bootstrap"
 
 # Run-level result state, finalized by the EXIT trap into result.json.
 PHASE="setup"
