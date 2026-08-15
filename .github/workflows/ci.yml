@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  static-linux:
+    name: Static checks (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Shell syntax
+        run: bash -n start.sh scripts/install.sh agents.sh
+      - name: Compose config
+        run: docker compose config --quiet
+
+  pester-linux:
+    name: Pester unit suite (container)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run container Pester suite
+        run: scripts/windows-testing/run-pester.sh
+
+  pester-windows:
+    name: Pester suite (Windows PowerShell)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Pester
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module Pester -RequiredVersion 5.7.1 -Force -SkipPublisherCheck -Scope CurrentUser
+      - name: Run suite (unit + I-04 execution policy)
+        shell: pwsh
+        run: |
+          $env:PESTER_TEST_PATH = Join-Path $PWD 'tests\windows'
+          $env:PESTER_RESULTS_PATH = Join-Path $PWD 'tests\windows\results\windows-ci.xml'
+          New-Item -ItemType Directory -Force -Path (Split-Path $env:PESTER_RESULTS_PATH) | Out-Null
+          $config = & (Join-Path $PWD 'tests\windows\pester.config.ps1')
+          Invoke-Pester -Configuration $config
+      - name: Upload Pester results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pester-windows-results
+          path: tests/windows/results/windows-ci.xml
