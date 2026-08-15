@@ -44,7 +44,7 @@ exit 0
 
             $result.ExitCode | Should -Be 0
             Test-Path $marker | Should -BeTrue
-            (Get-Content $marker -Raw) | Should -Be "bypass-ok"
+            ((Get-Content $marker -Raw).Trim()) | Should -Be "bypass-ok"
             ($result.Output -join "`n") | Should -Not -Match "Password|secret|token"
         } finally {
             & $ws.Cleanup
